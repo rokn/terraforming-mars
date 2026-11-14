@@ -11,14 +11,36 @@
         (⌛ <span v-for="color in playersWaitingFor" class="log-player" :class="playerColorClass(color, 'bg')" :key="color">{{ getPlayerName(color) }}</span>)
       </template>
     </template>
-    <div v-if="waitingfor !== undefined" class="wf-root">
-      <PlayerInputFactory :players="playerView.players"
-        :playerView="playerView"
-        :playerinput="waitingfor"
-        :onsave="onsave"
-        :showsave="true"
-        :showtitle="true"
-        :key="inputKey" />
+    <div :class="{'tm-play-modal': modal}" :data-test="modal ? 'followup-modal' : undefined" @click.self="modal && $emit('dismiss')">
+      <div :class="{'tm-play-modal-box tm-followup-box': modal}">
+        <div v-if="modal" class="tm-play-modal-head">
+          <div class="tm-followup-title">
+            <h2 class="tm-section-title tm-section-title--large" v-i18n>Your choice</h2>
+            <span class="tm-section-caption" v-i18n>This action has started. Close this to look around and finish it in Operations.</span>
+          </div>
+          <button type="button" class="tm-sheet-close" :title="$t('Close')" :aria-label="$t('Close')" data-test="followup-close" @click="$emit('dismiss')">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="square" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19" /></svg>
+          </button>
+        </div>
+        <div :class="{'tm-play-modal-body': modal}">
+          <div v-if="waitingfor !== undefined" class="wf-root">
+            <ActionMenu v-if="actionMenu && waitingfor.type === 'or'"
+              :playerView="playerView"
+              :playerinput="waitingfor"
+              :onsave="onsave"
+              :showsave="true"
+              :showtitle="true"
+              :key="'menu' + inputKey" />
+            <PlayerInputFactory v-else :players="playerView.players"
+              :playerView="playerView"
+              :playerinput="waitingfor"
+              :onsave="onsave"
+              :showsave="true"
+              :showtitle="true"
+              :key="inputKey" />
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -26,7 +48,8 @@
 <script lang="ts">
 /* global RequestInit */
 
-import {defineComponent} from 'vue';
+import {ComponentPublicInstance, defineComponent} from 'vue';
+import ActionMenu from '@/client/components/ActionMenu.vue';
 import * as constants from '@/common/constants';
 import raw_settings from '@/genfiles/settings.json';
 import {vueRoot} from '@/client/components/vueRoot';
@@ -89,6 +112,19 @@ export default defineComponent({
       type: String as () => string | undefined,
       default: undefined,
     },
+    /* When true, the input shows in a dialog over the game rather than in place. */
+    modal: {
+      type: Boolean,
+      default: false,
+    },
+    /* When true, a top-level choice of actions shows as a menu of tiles rather than a radio list. */
+    actionMenu: {
+      type: Boolean,
+      default: false,
+    },
+  },
+  components: {
+    ActionMenu,
   },
   data(): DataModel {
     return {
@@ -164,7 +200,7 @@ export default defineComponent({
         {method: 'GET'});
     },
     fetchPlayerInput(url: string, options: RequestInit) {
-      const root = vueRoot(this);
+      const root = vueRoot(this as unknown as ComponentPublicInstance);
       if (root.isServerSideRequestInProgress) {
         console.warn('Server request in progress');
         return;
@@ -178,7 +214,7 @@ export default defineComponent({
             return;
           }
 
-          const showAlert = vueRoot(this).showAlert;
+          const showAlert = vueRoot(this as unknown as ComponentPublicInstance).showAlert;
           if (response.status === statusCode.badRequest) {
             const resp = await response.json() as AppErrorResponse;
             let cb = () => {};
@@ -200,7 +236,7 @@ export default defineComponent({
         });
     },
     updatePlayerView(playerView: PlayerViewModel | undefined) {
-      const root = vueRoot(this);
+      const root = vueRoot(this as unknown as ComponentPublicInstance);
       root.playerView = playerView;
       root.screen = 'player-home';
       if (this.playerView.game.phase === 'end' && window.location.pathname !== paths.THE_END) {
@@ -209,7 +245,7 @@ export default defineComponent({
     },
     waitForUpdate() {
       const vueApp = this;
-      const root = vueRoot(this);
+      const root = vueRoot(this as unknown as ComponentPublicInstance);
       clearTimeout(ui_update_timeout_id);
       const askForUpdate = () => {
         const xhr = new XMLHttpRequest();
@@ -316,16 +352,24 @@ export default defineComponent({
         }
       }
     },
+    onModalKeydown(event: KeyboardEvent): void {
+      if (this.modal && event.key === 'Escape') {
+        this.$emit('dismiss');
+      }
+    },
     playerName(color: Color) {
       const player = this.playerView.players.find((p) => p.color === color);
       return player?.name ?? '';
     },
   },
+  emits: ['dismiss'],
   mounted() {
     this.start();
+    window.addEventListener('keydown', this.onModalKeydown);
   },
   beforeUnmount() {
     this.stop();
+    window.removeEventListener('keydown', this.onModalKeydown);
   },
   computed: {
     Phase(): typeof Phase {

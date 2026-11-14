@@ -1,5 +1,10 @@
 <template>
   <div :class="gameBoardClassName">
+    <MarsGauges v-if="drawnBoard"
+      :boardName="boardName"
+      :temperature="temperature"
+      :oxygen="oxygen_level"
+      :oceans="oceans_count" />
     <div class="hide-tile-button-container">
       <div class="hide-tile-button" @click="$emit('toggleTileView')" data-test="hide-tiles-button" v-i18n>
         {{ tileView }} tiles
@@ -20,7 +25,7 @@
       <BoardSpace v-if="hasSpace(SpaceName.VENERA_BASE)" :space="getSpace(SpaceName.VENERA_BASE)" text="Venera Base" :tileView="tileView" />
     </div>
 
-    <div class="global-numbers" :class="{'global-numbers--large': isLargeBoard}">
+    <div v-if="!drawnBoard" class="global-numbers" :class="{'global-numbers--large': isLargeBoard}">
       <div class="global-numbers-temperature">
         <div :class="getScaleCSS(lvl)" v-for="(lvl, idx) in getValuesForParameter('temperature')" :key="idx">{{ lvl.strValue }}</div>
       </div>
@@ -355,6 +360,7 @@ import {defineComponent} from 'vue';
 import * as constants from '@/common/constants';
 import {getGlobalParameterMaximums} from '@/common/boards/GlobalParameterMaximums';
 import BoardSpace from '@/client/components/BoardSpace.vue';
+import MarsGauges from '@/client/components/board/MarsGauges.vue';
 import {AresData} from '@/common/ares/AresData';
 import {SpaceModel} from '@/common/models/SpaceModel';
 import {SpaceType} from '@/common/boards/SpaceType';
@@ -417,6 +423,7 @@ export default defineComponent({
   },
   components: {
     BoardSpace,
+    MarsGauges,
   },
   methods: {
     hasSpace(spaceId: SpaceId): boolean {
@@ -520,7 +527,18 @@ export default defineComponent({
         .filter((s) => s.spaceType !== SpaceType.COLONY)
         .toSorted((space1, space2) => parseInt(space1.id) - parseInt(space2.id));
     },
+    /*
+     * True when the planet and global parameter gauges are drawn rather than taken from the board image.
+     *
+     * Venus, Ares hazard thresholds and the large map still rely on markers positioned over the image.
+     */
+    drawnBoard(): boolean {
+      return !this.isLargeBoard && !this.expansions.venus && !this.altVenusBoard && !this.expansions.ares;
+    },
     gameBoardClassName(): string {
+      if (this.drawnBoard) {
+        return 'board-cont board-cont--drawn';
+      }
       const css = this.expansions.venus ? 'board-cont board-with-venus' : 'board-cont board-without-venus';
       return this.isLargeBoard ? css + ' board-cont--large' : css;
     },

@@ -33,7 +33,7 @@
 
   <DeltaProjectBoard v-if="game.gameOptions.expansions.deltaProject" :players="players" />
 
-  <div v-if="players.length > 1" class="player_home_block--milestones-and-awards">
+  <div v-if="players.length > 1 && showMilestonesAndAwards" class="player_home_block--milestones-and-awards">
     <a class="hotkey-target"></a>
     <Milestones :milestones="game.milestones" />
     <Awards :awards="game.awards" />
@@ -70,6 +70,11 @@ export default defineComponent({
     players: {
       type: Array as PropType<ReadonlyArray<PublicPlayerModel>>,
       required: true,
+    },
+    /* True when milestones and awards render below the board. */
+    showMilestonesAndAwards: {
+      type: Boolean,
+      default: true,
     },
   },
   emits: ['toggleTileView'],

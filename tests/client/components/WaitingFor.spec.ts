@@ -47,6 +47,25 @@ describe('WaitingFor', () => {
     expect(wrapper.text()).to.not.include('Not your turn');
   });
 
+  it('shows the input in a dialog over the game when modal, which can be closed', async () => {
+    const wrapper = shallowMount(WaitingFor, {
+      ...globalConfig,
+      global: {
+        ...globalConfig.global,
+        stubs: {'PlayerInputFactory': {template: '<div class="stub-pif"></div>'}},
+      },
+      props: {
+        playerView: playerView as PlayerViewModel,
+        modal: true,
+        waitingfor: {type: 'option', title: 'test', buttonLabel: 'save'},
+      },
+    });
+    expect(wrapper.find('[data-test=followup-modal] .tm-play-modal-box .stub-pif').exists()).is.true;
+    await wrapper.find('[data-test=followup-close]').trigger('click');
+    window.dispatchEvent(new KeyboardEvent('keydown', {key: 'Escape'}));
+    expect(wrapper.emitted('dismiss')).has.length(2);
+  });
+
   it('shows "not your turn" when waitingfor is undefined', () => {
     const wrapper = shallowMount(WaitingFor, {
       ...globalConfig,

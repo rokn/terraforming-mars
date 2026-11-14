@@ -6,13 +6,16 @@
       </label>
     </div>
     <div class="sortable-cards">
-      <div ref="draggers" :class="{ 'dragging': Boolean(dragCard) }" v-for="(card, index) in getSortedCards()" :key="card.name" draggable="true" @dragend="onDragEnd()" @dragstart="onDragStart(card.name)" @dragover.prevent="onDragOver(card.name, $event)">
-        <div ref="cardbox" class="cardbox" @click="clickMethod">
-          <Card :card="card" />
-          <div v-if="showReorder" class="reorder-banners-container">
-            <div class="reorder-banners-left" v-if="index > 0"></div>
-            <div class="reorder-banners-right" v-if="index < cards.length - 1"></div>
+      <div ref="draggers" :class="{ 'dragging': Boolean(dragCard) }" v-for="(card, index) in getSortedCards()" :key="card.name" draggable="true" @click="onCardClick(card.name, $event)" @dragend="onDragEnd()" @dragstart="onDragStart(card.name)" @dragover.prevent="onDragOver(card.name, $event)">
+        <div class="sortable-lift">
+          <div ref="cardbox" class="cardbox" :class="playableClass(card.name)">
+            <Card :card="card" />
+            <div v-if="showReorder" class="reorder-banners-container">
+              <div class="reorder-banners-left" v-if="index > 0"></div>
+              <div class="reorder-banners-right" v-if="index < cards.length - 1"></div>
+            </div>
           </div>
+          <button v-if="playable !== undefined && playable.includes(card.name)" type="button" class="sortable-play" data-test="play-card" @click.stop="$emit('play', card.name)" v-i18n>Play</button>
         </div>
       </div>
     </div>
@@ -67,6 +70,11 @@ export default defineComponent({
     Card,
   },
   props: {
+    /* When set, the cards that can be played now: they get a play button, and the others dim. */
+    playable: {
+      type: Array as () => ReadonlyArray<CardName> | undefined,
+      default: undefined,
+    },
     cards: {
       type: Array as () => Array<CardModel>,
       required: true,
@@ -85,7 +93,7 @@ export default defineComponent({
       required: false,
     },
   },
-  emits: ['update:sortOrder'],
+  emits: ['update:sortOrder', 'play'],
   watch: {
     cards(cards: Array<CardModel>): void {
       this.cardOrder = initialCardOrder(this.playerId, cards);
@@ -141,6 +149,20 @@ export default defineComponent({
     },
     doNotDragAndDropOnReorder() {
       return this.showReorder ? 'do-not-drag-and-drop' : '';
+    },
+    playableClass(name: CardName): string | undefined {
+      if (this.playable === undefined) {
+        return undefined;
+      }
+      return this.playable.includes(name) ? 'cardbox--playable' : 'cardbox--unplayable';
+    },
+    /* Clicking a playable card plays it, unless the player is reordering cards. */
+    onCardClick(name: CardName, e: MouseEvent): void {
+      if (!this.showReorder && this.playable?.includes(name)) {
+        this.$emit('play', name);
+        return;
+      }
+      this.clickMethod(e);
     },
     clickMethod(e: MouseEvent) {
       if (!this.showReorder) {

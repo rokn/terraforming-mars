@@ -31,23 +31,7 @@ import PlayerInfo from '@/client/components/overview/PlayerInfo.vue';
 import OverviewSettings from '@/client/components/overview/OverviewSettings.vue';
 import OtherPlayer from '@/client/components/OtherPlayer.vue';
 import {ViewModel, PublicPlayerModel} from '@/common/models/PlayerModel';
-import {ActionLabel} from '@/client/components/overview/ActionLabel';
-import {Phase} from '@/common/Phase';
-import {Color} from '@/common/Color';
-
-const SHOW_NEXT_LABEL_MIN = 2;
-
-export const playerIndex = (
-  color: Color,
-  players: Array<PublicPlayerModel>,
-): number => {
-  for (let idx = 0; idx < players.length; idx++) {
-    if (players[idx].color === color) {
-      return idx;
-    }
-  }
-  return -1;
-};
+import {ActionLabel, getActionLabel, playerIndex} from '@/client/components/overview/ActionLabel';
 
 export default defineComponent({
   name: 'PlayersOverview',
@@ -99,57 +83,7 @@ export default defineComponent({
       return playerIndex(player.color, this.players) === 0;
     },
     getActionLabel(player: PublicPlayerModel): ActionLabel {
-      if (this.playerView.game.phase === Phase.DRAFTING) {
-        if (player.needsToDraft) {
-          return 'drafting';
-        } else {
-          return 'none';
-        }
-      } else if (this.playerView.game.phase === Phase.RESEARCH) {
-        if (player.needsToResearch) {
-          return 'researching';
-        } else {
-          return 'none';
-        }
-      } else if (this.playerView.game.phase === Phase.SOLAR) {
-        // World Government Advisor and Terra briefly enter the Solar phase during the active player's turn.
-        // Otherwise this is World Government Terraforming, where activePlayer is stale and the running
-        // timer shows who is deciding.
-        const activePlayerIsDeciding = this.players.some((p) => p.isActive && p.timer.running);
-        if (!activePlayerIsDeciding) {
-          return player.timer.running ? 'active' : 'none';
-        }
-      }
-      if (this.playerView.game.passedPlayers.includes(player.color)) {
-        return 'passed';
-      }
-      if (player.isActive) {
-        return 'active';
-      }
-      const notPassedPlayers = this.players.filter(
-        (p: PublicPlayerModel) => !this.playerView.game.passedPlayers.includes(p.color),
-      );
-
-      const currentPlayerIndex = playerIndex(
-        player.color,
-        notPassedPlayers,
-      );
-
-      if (currentPlayerIndex === -1) {
-        return 'none';
-      }
-
-      const prevPlayerIndex =
-                currentPlayerIndex === 0 ?
-                  notPassedPlayers.length - 1 :
-                  currentPlayerIndex - 1;
-      const isNext = notPassedPlayers[prevPlayerIndex].isActive;
-
-      if (isNext && this.players.length > SHOW_NEXT_LABEL_MIN) {
-        return 'next';
-      }
-
-      return 'none';
+      return getActionLabel(this.playerView, player);
     },
   },
 });
