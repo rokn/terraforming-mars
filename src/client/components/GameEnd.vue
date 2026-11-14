@@ -1,7 +1,124 @@
 <template>
-  <div id="game-end" class="game_end_cont">
-    <h1><HomeLink>{{ constants.APP_NAME }} - Game finished!</HomeLink></h1>
-    <div class="game_end">
+  <div id="game-end" class="game_end_cont tm-end" :class="{'tm-end--app': !isSoloGame}">
+    <header class="tm-header">
+      <div class="tm-header-brand">
+        <svg width="36" height="36" viewBox="0 0 36 36" aria-hidden="true">
+          <polygon points="18,2 32,10 32,26 18,34 4,26 4,10" class="tm-header-logo-hex" />
+          <polygon points="18,8 27,13 27,23 18,28 9,23 9,13" class="tm-header-logo-ring" />
+          <circle cx="18" cy="18" r="3.4" class="tm-header-logo-dot" />
+        </svg>
+        <div class="tm-header-title">
+          <h1 class="tm-header-name"><HomeLink>{{ constants.APP_NAME }}</HomeLink></h1>
+          <span class="tm-header-meta"><span v-i18n>Game finished!</span> · <span v-i18n>Generation</span> {{ game.generation }}</span>
+        </div>
+      </div>
+      <span class="tm-header-over" v-i18n>Game over</span>
+      <div v-if="!isSoloGame" class="tm-end-actions">
+        <a href="new-game" class="tm-button tm-button--primary" v-i18n>Create New Game</a>
+        <a href="." class="tm-button tm-button--secondary" v-i18n>Go to main page</a>
+      </div>
+    </header>
+
+    <div v-if="!isSoloGame" class="tm-end-main">
+      <section class="tm-panel tm-panel--large tm-end-results">
+        <div class="tm-panel-inner">
+          <FinalStandings :game="game" :players="playersInPlace" :winners="winners" />
+          <h2 class="tm-section-title tm-end-sources-title" v-i18n>Points by source</h2>
+          <div class="tm-end-sources">
+            <div v-for="p in playersInPlace" :key="p.color" class="tm-end-source" data-test="end-source">
+              <div class="tm-end-source-head"><PlayerCube :color="p.color" :size="16" /><span>{{ p.name }}</span></div>
+              <div v-for="v in p.victoryPointsBreakdown.detailsCards" :key="v.cardName" class="tm-end-source-row">
+                <span class="tm-end-source-vp">{{ v.victoryPoint }}</span><span v-i18n>{{ v.cardName }}</span>
+              </div>
+              <div v-for="v in p.victoryPointsBreakdown.detailsMilestones" :key="v.message + v.messageArgs" class="tm-end-source-row">
+                <span class="tm-end-source-vp">{{ v.victoryPoint }}</span><span>{{ translateMilestoneDetails(v) }}</span>
+              </div>
+              <div v-for="v in p.victoryPointsBreakdown.detailsAwards" :key="v.message + v.messageArgs" class="tm-end-source-row">
+                <span class="tm-end-source-vp">{{ v.victoryPoint }}</span><span>{{ translateAwardDetails(v) }}</span>
+              </div>
+              <div v-for="v in p.victoryPointsBreakdown.detailsPlanetaryTracks" :key="v.tag" class="tm-end-source-row">
+                <span class="tm-end-source-vp">{{ v.points }}</span><span v-i18n>Most tags on the {{ v.tag }} track</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="tm-panel tm-panel--large tm-end-details">
+        <div class="tm-panel-inner">
+          <div class="tm-sheet-tabs tm-end-tabs" role="tablist">
+            <button v-for="t in tabs" :key="t.key" type="button" role="tab" class="tm-sheet-tab"
+              :class="{'tm-sheet-tab--on': tab === t.key}" :aria-selected="tab === t.key" :data-test="'end-tab-' + t.key" @click="tab = t.key" v-i18n>{{ t.label }}</button>
+          </div>
+
+          <div v-show="tab === 'board'" class="tm-end-tab tm-end-tab--board">
+            <FitToBox class="tm-board-fit" zoomable>
+              <div class="player_home_block tm-board-block">
+                <Board
+                  :spaces="game.spaces"
+                  :expansions="game.gameOptions.expansions"
+                  :venusScaleLevel="game.venusScaleLevel"
+                  :altVenusBoard="game.gameOptions.altVenusBoard"
+                  :boardName="game.gameOptions.boardName"
+                  :oceans_count="game.oceans"
+                  :oxygen_level="game.oxygenLevel"
+                  :temperature="game.temperature"
+                  :tileView="tileView"
+                  @toggleTileView="cycleTileView()" />
+                <MoonBoard v-if="game.moon !== undefined" :model="game.moon" :tileView="tileView" />
+                <PlanetaryTracks v-if="game.gameOptions.expansions.pathfinders" :tracks="game.pathfinders" :gameOptions="game.gameOptions" />
+                <DeltaProjectBoard v-if="game.gameOptions.expansions.deltaProject" :players="participant.players" />
+              </div>
+            </FitToBox>
+          </div>
+
+          <div v-if="tab === 'points'" class="tm-end-tab tm-end-tab--chart">
+            <VictoryPointChart :datasets="vpDataset" :generation="game.generation" :animation="true" :id="'victory-point-chart'" />
+          </div>
+
+          <div v-if="tab === 'globals'" class="tm-end-tab tm-end-tab--globals">
+            <table class="tm-end-table">
+              <thead>
+                <tr>
+                  <th v-i18n>Player</th>
+                  <th v-i18n>Temperature</th>
+                  <th v-i18n>Oxygen</th>
+                  <th v-i18n>Oceans</th>
+                  <th v-if="game.gameOptions.expansions.venus" v-i18n>Venus</th>
+                  <th v-if="game.gameOptions.expansions.moon" v-i18n>L. Habitat</th>
+                  <th v-if="game.gameOptions.expansions.moon" v-i18n>L. Mining</th>
+                  <th v-if="game.gameOptions.expansions.moon" v-i18n>L. Logistic</th>
+                  <th v-i18n>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="data in playerContributionsData" :key="data.color">
+                  <td><PlayerCube :color="data.color" :size="14" /> {{ data.player }}</td>
+                  <td>{{ data.temp }}</td>
+                  <td>{{ data.oxygen }}</td>
+                  <td>{{ data.oceans }}</td>
+                  <td v-if="game.gameOptions.expansions.venus">{{ data.venus }}</td>
+                  <td v-if="game.gameOptions.expansions.moon">{{ data.moonHabitat }}</td>
+                  <td v-if="game.gameOptions.expansions.moon">{{ data.moonMining }}</td>
+                  <td v-if="game.gameOptions.expansions.moon">{{ data.moonLogistic }}</td>
+                  <td class="tm-end-table-total">{{ data.total }}</td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="tm-end-tab--chart">
+              <VictoryPointChart :datasets="globalsDataset" :generation="game.generation" :animation="true" :id="'global-parameter-chart'" :yAxisLabel="'% completed'" />
+            </div>
+          </div>
+
+          <div v-show="tab === 'log'" class="tm-end-tab tm-end-tab--scroll">
+            <LogPanel :viewModel="participant" />
+            <a :href="downloadLogUrl" target="_blank" v-i18n>Download game log</a>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div v-if="isSoloGame" class="game_end">
       <div v-if="isSoloGame">
         <div v-if="game.isSoloModeWin">
           <div class="game_end_success">
@@ -35,7 +152,7 @@
           </div>
         </div>
       </div>
-      <div class="game_end_navigation">
+      <div v-if="isSoloGame" class="game_end_navigation">
         <div>
           <a href="new-game">
             <AppButton size="big" type="back" />
@@ -48,7 +165,7 @@
           </a>
         </div>
       </div>
-      <div v-if="!isSoloGame || game.isSoloModeWin" class="game-end-winner-announcement">
+      <div v-if="isSoloGame && game.isSoloModeWin" class="game-end-winner-announcement">
         <span v-for="p in winners" :key="p.color"><span :class="'log-player ' + getEndGamePlayerRowColorClass(p.color)">{{ p.name }}</span></span> <span v-i18n>won!</span>
       </div>
       <div class="game_end_victory_points">
@@ -215,6 +332,9 @@
 
 <script lang="ts">
 
+import FinalStandings from '@/client/components/gameend/FinalStandings.vue';
+import FitToBox from '@/client/components/common/FitToBox.vue';
+import PlayerCube from '@/client/components/common/PlayerCube.vue';
 import {defineComponent} from 'vue';
 import * as constants from '@/common/constants';
 import {setDocumentTitle} from '@/client/utils/documentTitle';
@@ -244,6 +364,15 @@ import {Message} from '@/common/logs/Message';
 import {LogMessageDataType} from '@/common/logs/LogMessageDataType';
 import {MADetail} from '@/common/game/VictoryPointsBreakdown';
 import {AwardName} from '@/common/ma/AwardName';
+
+/** The tabs of the details panel. */
+type EndTab = 'board' | 'points' | 'globals' | 'log';
+const TABS: ReadonlyArray<{key: EndTab, label: string}> = [
+  {key: 'board', label: 'Final board'},
+  {key: 'points', label: 'Points over time'},
+  {key: 'globals', label: 'Global parameters'},
+  {key: 'log', label: 'Game log'},
+];
 
 export default defineComponent({
   name: 'GameEnd',
@@ -355,13 +484,20 @@ export default defineComponent({
     constants(): typeof constants {
       return constants;
     },
+    tabs(): ReadonlyArray<{key: EndTab, label: string}> {
+      return TABS;
+    },
   },
-  data(): {tileView: TileView} {
+  data(): {tileView: TileView, tab: EndTab} {
     return {
       tileView: 'show',
+      tab: 'board',
     };
   },
   components: {
+    FinalStandings,
+    FitToBox,
+    PlayerCube,
     HomeLink,
     Board,
     LogPanel,

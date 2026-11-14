@@ -7,6 +7,7 @@
     S - Players Overview Table<br>
     D - Cards in Hand<br>
     F - Colonies<br>
+    B - Your tableau<br>
     <template v-if="preferences().experimental_ui">
       <br>
       1-9 - Scroll through the player board.

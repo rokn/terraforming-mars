@@ -33,3 +33,64 @@
   border-radius: 0px !important;
   background-position: 0px !important;
 }
+
+// Chamfered corners (top-left and bottom-right) used by the in-game theme's panels.
+.tm-chamfer(@n: 14px) {
+  clip-path: polygon(@n 0, 100% 0, 100% calc(100% - @n), calc(100% - @n) 100%, 0 100%, 0 @n);
+}
+
+// Uppercase condensed display type used for in-game headings and buttons.
+.tm-display(@size: 17px, @weight: 800) {
+  font-family: @tm_font_display;
+  font-weight: @weight;
+  font-size: @size;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+// Stencil heading type used for in-game section titles.
+.tm-stencil(@size: 22px) {
+  font-family: @tm_font_stencil;
+  font-weight: 800;
+  font-size: @size;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+// Small monospace caption used for in-game labels and counters.
+.tm-caption(@size: 11px) {
+  font-family: @tm_font_mono;
+  font-size: @size;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: @tm_text_muted;
+  text-transform: uppercase;
+}
+
+// Yellow-and-black hazard stripe.
+.tm-hazard(@w: 6px) {
+  background: repeating-linear-gradient(-45deg, @tm_gold 0 @w, @tm_bg (@w) (@w * 2));
+}
+
+// Primary (orange) and secondary (outlined) in-game buttons.
+.tm-button-primary() {
+  .tm-display(17px);
+  min-height: 44px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 0;
+  background: @tm_accent;
+  color: @tm_bg;
+  cursor: pointer;
+}
+.tm-button-secondary() {
+  .tm-display(16px);
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid @tm_line_button;
+  border-radius: 0;
+  background: transparent;
+  color: @tm_text;
+  cursor: pointer;
+}

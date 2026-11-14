@@ -234,4 +234,35 @@ describe('SortableCards', () => {
 
     expect(cardsInOrder(sortable)).to.deep.eq([CardName.ASTEROID_MINING, CardName.ANTS, CardName.CARTEL, CardName.NUCLEAR_ZONE]);
   });
+
+  it('offers to play playable cards and dims the rest', async () => {
+    const sortable = mount(SortableCards, {
+      ...globalConfig,
+      props: {
+        cards: [{name: CardName.ANTS}, {name: CardName.CARTEL}],
+        playerId: 'player1',
+        playable: [CardName.CARTEL],
+      },
+    });
+    const buttons = sortable.findAll('[data-test=play-card]');
+    expect(buttons).has.length(1);
+    expect(sortable.findAll('.cardbox--unplayable')).has.length(1);
+    await buttons[0].trigger('click');
+    expect(sortable.emitted('play')).deep.eq([[CardName.CARTEL]]);
+  });
+
+  it('plays a playable card when it is clicked', async () => {
+    const sortable = mount(SortableCards, {
+      ...globalConfig,
+      props: {
+        cards: [{name: CardName.ANTS}, {name: CardName.CARTEL}],
+        playerId: 'player1',
+        playable: [CardName.CARTEL],
+      },
+    });
+    const boxes = sortable.findAll('.cardbox');
+    await boxes[0].trigger('click');
+    await boxes[1].trigger('click');
+    expect(sortable.emitted('play')).deep.eq([[CardName.CARTEL]]);
+  });
 });

@@ -41,7 +41,7 @@
     </div>
 
     <div v-if="showsave" class="payments_save">
-      <AppButton size="big" @click="handleSave()" :title="$t(buttonLabel)" data-test="save" />
+      <AppButton size="big" @click="handleSave()" :title="$t(buttonLabel)" data-test="save" data-primary />
     </div>
   </section>
 </template>
