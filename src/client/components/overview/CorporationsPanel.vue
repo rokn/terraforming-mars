@@ -27,7 +27,11 @@
         <span class="tm-corp-foot">
           <span class="tm-corp-player">{{ player.name }}<template v-if="isMe(player)"> · <span v-i18n>you</span></template></span>
           <span class="tm-corp-mc"><span class="tm-mc-chip" data-test="mc">{{ player.megacredits }}</span>M€</span>
-          <span class="tm-corp-cards"><span data-test="cards">{{ player.cardsInHandNbr }}</span> <span v-i18n>cards</span></span>
+          <span class="tm-corp-cards" :title="$t('Cards in hand')">
+            <svg class="tm-corp-cards-icon" width="9" height="12" viewBox="0 0 9 12" aria-hidden="true"><rect x="0.75" y="0.75" width="7.5" height="10.5" rx="1" fill="none" stroke="currentColor" stroke-width="1.5" /></svg>
+            <span data-test="cards">{{ player.cardsInHandNbr }}</span> <span class="tm-corp-cards-label" v-i18n>cards</span>
+          </span>
+          <PlayerExpansionStats :player="player" :game="playerView.game" />
           <span class="tm-corp-status" :class="'tm-corp-status--' + statusFor(player)" data-test="status" v-i18n>{{ statusText(player) }}</span>
         </span>
       </span>
@@ -43,6 +47,7 @@ import {getCard} from '@/client/cards/ClientCardManifest';
 import {ActionLabel, getActionLabel} from '@/client/components/overview/ActionLabel';
 import PlayerCube from '@/client/components/common/PlayerCube.vue';
 import PlayerTimer from '@/client/components/overview/PlayerTimer.vue';
+import PlayerExpansionStats from '@/client/components/overview/PlayerExpansionStats.vue';
 import {playerHex} from '@/client/utils/gameTheme';
 
 const STATUS_TEXT: Record<ActionLabel, string> = {
@@ -67,6 +72,7 @@ export default defineComponent({
   components: {
     PlayerCube,
     PlayerTimer,
+    PlayerExpansionStats,
   },
   computed: {
     showTimers(): boolean {

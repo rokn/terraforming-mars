@@ -11,6 +11,9 @@ import {OrOptionsModel, PlayerInputModel, SelectCardModel, SelectProjectCardToPl
 import {CardName} from '@/common/cards/CardName';
 import {quickActions, requestAction, requestPlay} from '@/client/utils/quickActions';
 import {asComplete} from './utils/models';
+import {ColonyName} from '@/common/colonies/ColonyName';
+import {simpleColonyModel} from '@/common/models/ColonyModel';
+import {fakePlayerViewModel, fakePublicPlayerModel} from './testHelpers';
 
 const playCard = asComplete<SelectProjectCardToPlayModel>({
   type: 'projectCard',
@@ -132,5 +135,53 @@ describe('ActionMenu', () => {
     expect(quickActions.focusActions).is.false;
     expect(quickActions.followUp).is.true;
     quickActions.followUp = false;
+  });
+
+  it('opens trading in a large dialog with the colony tiles, and what follows in a dialog too', async () => {
+    const home = document.createElement('div');
+    home.id = 'player-home';
+    document.body.appendChild(home);
+    PreferencesManager.INSTANCE.set('learner_mode', false);
+    const trade: PlayerInputModel = {type: 'and', title: 'Trade with a colony tile', buttonLabel: 'Trade', options: [
+      {type: 'or', title: 'Pay trade fee', buttonLabel: 'Pay', options: [{type: 'option', title: 'Pay 9 M€', buttonLabel: 'Pay'}]},
+      {type: 'colony', title: 'Select colony tile for trade', buttonLabel: 'Trade', coloniesModel: [ColonyName.CERES, ColonyName.LUNA].map(simpleColonyModel)},
+    ]};
+    let saved: InputResponse | undefined;
+    const playerinput: OrOptionsModel = {type: 'or', title: 'Take your first action', buttonLabel: '', options: [
+      trade,
+      {type: 'option', title: 'Pass for this generation', buttonLabel: 'Pass'},
+    ]};
+    const thisPlayer = fakePublicPlayerModel({fleetSize: 2, tradesThisGeneration: 1});
+    const wrapper = mount(ActionMenu, {
+      ...globalConfig,
+      attachTo: home,
+      global: {
+        ...globalConfig.global,
+        components: {PlayerInputFactory},
+        // The operations panel asks for compact colony choices; the dialog overrides it.
+        provide: {compactColonies: () => true},
+      },
+      props: {playerView: fakePlayerViewModel({thisPlayer}), playerinput, onsave: (out: InputResponse) => saved = out, showsave: true, showtitle: true},
+    });
+    expect(wrapper.findAll('[data-test=action-hint]')[0].text()).eq('2 colonies · 1 fleets free');
+
+    await wrapper.findAll('[data-test=action-tile]')[0].trigger('click');
+    await wrapper.vm.$nextTick();
+    const dialog = document.querySelector('.tm-play-modal');
+    expect(dialog).is.not.null;
+    expect(dialog?.querySelectorAll('[data-test^=colony-tile-]')).has.length(2);
+    expect(dialog?.querySelector('[data-test=colony-picks]')).is.null;
+
+    (dialog?.querySelector('[data-test=colony-tile-Luna]') as HTMLElement).click();
+    await wrapper.vm.$nextTick();
+    (dialog?.querySelector('[data-primary]') as HTMLElement).click();
+    expect(saved).deep.eq({type: 'or', index: 0, response: {type: 'and', responses: [
+      {type: 'or', index: 0, response: {type: 'option'}},
+      {type: 'colony', colonyName: ColonyName.LUNA},
+    ]}});
+    expect(quickActions.followUp).is.true;
+    quickActions.followUp = false;
+    wrapper.unmount();
+    home.remove();
   });
 });

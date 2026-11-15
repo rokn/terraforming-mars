@@ -6,8 +6,10 @@
     A - Main Board<br>
     S - Players Overview Table<br>
     D - Cards in Hand<br>
-    F - Colonies<br>
+    F - Colonies (spectator view)<br>
     B - Your tableau<br>
+    M - Show Mars in the centre<br>
+    C - Show the colonies in the centre<br>
     <template v-if="preferences().experimental_ui">
       <br>
       1-9 - Scroll through the player board.

@@ -1,13 +1,15 @@
 <template>
   <div class="tm-main tm-main--setup">
     <section class="tm-setup-side">
-      <div class="tm-panel tm-panel--large tm-setup-map">
+      <div class="tm-panel tm-panel--large tm-setup-map" :class="{'tm-setup-map--colonies': shownView === 'colonies'}">
         <div class="tm-panel-inner">
           <div class="tm-board-head">
-            <h2 class="tm-board-title" v-i18n>{{ boardTitle }}</h2>
-            <span class="tm-section-caption"><span v-i18n>Generation</span> {{ game.generation }}</span>
+            <h2 class="tm-board-title" v-i18n>{{ shownView === 'colonies' ? 'Colonies' : boardTitle }}</h2>
+            <CenterViewTabs :views="views" :modelValue="shownView" @update:modelValue="chooseView" />
+            <span v-if="views.length < 2" class="tm-section-caption"><span v-i18n>Generation</span> {{ game.generation }}</span>
           </div>
-          <FitToBox class="tm-board-fit" zoomable>
+          <ColoniesView v-if="shownView === 'colonies'" :colonies="game.colonies" :players="playerView.players" :columns="2" :fleets="false" />
+          <FitToBox v-else class="tm-board-fit" zoomable>
             <div class="player_home_block tm-board-block">
               <Board
                 :spaces="game.spaces"
@@ -51,16 +53,6 @@
         :players="playerView.players"
         :myColor="thisPlayer.color" />
 
-      <div v-if="game.colonies.length > 0" class="tm-panel" id="shortkey-colonies">
-        <div class="tm-panel-inner">
-          <h3 class="tm-section-title tm-section-title--small" v-i18n>Colonies</h3>
-          <div class="player_home_colony_cont">
-            <div class="player_home_colony" v-for="colony in game.colonies" :key="colony.name">
-              <Colony :colony="colony" :active="colony.isActive" />
-            </div>
-          </div>
-        </div>
-      </div>
     </section>
 
     <main class="tm-panel tm-panel--large tm-setup-pick" :aria-label="$t(heading)">
@@ -129,7 +121,9 @@ import DeltaProjectBoard from '@/client/components/delta/DeltaProjectBoard.vue';
 import FitToBox from '@/client/components/common/FitToBox.vue';
 import PlayerCube from '@/client/components/common/PlayerCube.vue';
 import MilestonesAwardsPanel from '@/client/components/MilestonesAwardsPanel.vue';
-import Colony from '@/client/components/colonies/Colony.vue';
+import ColoniesView from '@/client/components/colonies/ColoniesView.vue';
+import CenterViewTabs from '@/client/components/common/CenterViewTabs.vue';
+import {CenterView, centerViews, loadCenterView, saveCenterView} from '@/client/utils/centerView';
 import WaitingFor from '@/client/components/WaitingFor.vue';
 import PurgeWarning from '@/client/components/common/PurgeWarning.vue';
 import Turmoil from '@/client/components/turmoil/Turmoil.vue';
@@ -154,7 +148,19 @@ export default defineComponent({
     },
   },
   emits: ['toggleTileView'],
+  data(): {centerView: CenterView} {
+    return {
+      // The view the player chose for the map panel.
+      centerView: loadCenterView() ?? 'mars',
+    };
+  },
   computed: {
+    views(): Array<CenterView> {
+      return centerViews(this.game);
+    },
+    shownView(): CenterView {
+      return this.views.includes(this.centerView) ? this.centerView : 'mars';
+    },
     thisPlayer(): PublicPlayerModel {
       return this.playerView.thisPlayer;
     },
@@ -188,7 +194,8 @@ export default defineComponent({
     FitToBox,
     PlayerCube,
     MilestonesAwardsPanel,
-    Colony,
+    ColoniesView,
+    CenterViewTabs,
     WaitingFor,
     PurgeWarning,
     Turmoil,
@@ -196,6 +203,10 @@ export default defineComponent({
     MoonBoard,
   },
   methods: {
+    chooseView(view: CenterView): void {
+      this.centerView = view;
+      saveCenterView(view);
+    },
     /* True while `player` still has to choose their starting cards. */
     isChoosing(player: PublicPlayerModel): boolean {
       return player.needsToDraft === true || player.needsToResearch === true;

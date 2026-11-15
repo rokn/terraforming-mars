@@ -10,6 +10,12 @@ import {CardName} from '@/common/cards/CardName';
 import raw_settings from '@/genfiles/settings.json';
 import WaitingFor from '@/client/components/WaitingFor.vue';
 import {Phase} from '@/common/Phase';
+import ColoniesView from '@/client/components/colonies/ColoniesView.vue';
+import CenterViewTabs from '@/client/components/common/CenterViewTabs.vue';
+import {ColonyName} from '@/common/colonies/ColonyName';
+import {simpleColonyModel} from '@/common/models/ColonyModel';
+import {PlayerInputModel} from '@/common/models/PlayerInputModel';
+import {loadCenterView, saveCenterView} from '@/client/utils/centerView';
 
 describe('PlayerHome', () => {
   useFakeLocalStorage();
@@ -144,7 +150,68 @@ describe('PlayerHome', () => {
     waitingFor.vm.$emit('dismiss');
     await wrapper.vm.$nextTick();
     expect(waitingFor.props('modal')).is.false;
-    await wrapper.find('[data-test=prelude-reopen]').trigger('click');
+    await wrapper.find('[data-test=dialog-reopen]').trigger('click');
     expect(waitingFor.props('modal')).is.true;
+  });
+
+  describe('Colonies', () => {
+    function mountHome(waitingFor?: PlayerInputModel) {
+      const thisPlayer = fakePublicPlayerModel({tableau: [{name: CardName.ECOLINE}]});
+      const playerView = fakePlayerViewModel({
+        thisPlayer,
+        players: [thisPlayer],
+        game: fakeGameModel({colonies: [simpleColonyModel(ColonyName.LUNA)]}),
+        waitingFor,
+      });
+      return shallowMount(PlayerHome, {
+        ...globalConfig,
+        parentComponent: {
+          methods: {
+            getVisibilityState: () => false,
+            setVisibilityState: () => {},
+          },
+        },
+        props: {playerView, settings: raw_settings},
+      });
+    }
+    const buildColony: PlayerInputModel = {type: 'colony', title: 'Select where to build a colony', buttonLabel: 'Build', coloniesModel: [simpleColonyModel(ColonyName.LUNA)]};
+
+    it('switches the centre stage with C and M, and remembers the choice', async () => {
+      const wrapper = mountHome();
+      expect(wrapper.findComponent(CenterViewTabs).props('views')).deep.eq(['mars', 'colonies']);
+      expect(wrapper.findComponent(ColoniesView).exists()).is.false;
+
+      document.body.dispatchEvent(new KeyboardEvent('keydown', {code: 'KeyC', bubbles: true}));
+      await wrapper.vm.$nextTick();
+      expect(wrapper.findComponent(ColoniesView).exists()).is.true;
+      expect(loadCenterView()).eq('colonies');
+
+      document.body.dispatchEvent(new KeyboardEvent('keydown', {code: 'KeyM', bubbles: true}));
+      await wrapper.vm.$nextTick();
+      expect(wrapper.findComponent(ColoniesView).exists()).is.false;
+      wrapper.unmount();
+    });
+
+    it('opens a colony choice in a dialog, and shows the Colonies view once it is closed', async () => {
+      const wrapper = mountHome(buildColony);
+      const waitingFor = wrapper.findComponent(WaitingFor);
+      expect(waitingFor.props('modal')).is.true;
+      expect(wrapper.findComponent(ColoniesView).exists()).is.false;
+
+      waitingFor.vm.$emit('dismiss');
+      await wrapper.vm.$nextTick();
+      expect(waitingFor.props('modal')).is.false;
+      expect(wrapper.findComponent(ColoniesView).exists()).is.true;
+      expect(wrapper.find('[data-test=dialog-reopen]').text()).eq('Show colony tiles');
+      wrapper.unmount();
+    });
+
+    it('shows Mars when a space must be picked', async () => {
+      saveCenterView('colonies');
+      const wrapper = mountHome({type: 'space', title: 'Select space for ocean tile', buttonLabel: 'OK', spaces: []});
+      await wrapper.vm.$nextTick();
+      expect(wrapper.findComponent(ColoniesView).exists()).is.false;
+      wrapper.unmount();
+    });
   });
 });

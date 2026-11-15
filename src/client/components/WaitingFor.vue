@@ -12,7 +12,7 @@
       </template>
     </template>
     <div :class="{'tm-play-modal': modal}" :data-test="modal ? 'followup-modal' : undefined" @click.self="modal && $emit('dismiss')">
-      <div :class="{'tm-play-modal-box tm-followup-box': modal, 'tm-play-modal-box--wide': modal && waitingfor?.type === 'card'}">
+      <div :class="{'tm-play-modal-box tm-followup-box': modal, 'tm-play-modal-box--wide': modal && wideModal}">
         <div v-if="modal" class="tm-play-modal-head">
           <div class="tm-followup-title">
             <h2 class="tm-section-title tm-section-title--large" data-test="followup-title">{{ $t(modalTitle) }}</h2>
@@ -68,6 +68,7 @@ import {INVALID_REQUEST_ID, INVALID_RUN_ID, AppErrorResponse} from '@/common/app
 import {Color} from '@/common/Color';
 import {gameDocumentTitle} from '../utils/documentTitle';
 import {setFaviconStatus, setFaviconTurnFrame} from '@/client/utils/favicon';
+import {needsColonies} from '@/client/utils/centerView';
 
 let ui_update_timeout_id: number | undefined;
 let otherPlayersTimer: number | undefined;
@@ -135,6 +136,12 @@ export default defineComponent({
   },
   components: {
     ActionMenu,
+  },
+  provide() {
+    return {
+      // The operations panel is too narrow for colony tiles; a dialog is not.
+      compactColonies: () => this.actionMenu && !this.modal,
+    };
   },
   data(): DataModel {
     return {
@@ -382,6 +389,10 @@ export default defineComponent({
     window.removeEventListener('keydown', this.onModalKeydown);
   },
   computed: {
+    /* True when the dialog needs room: for a list of cards or colony tiles. */
+    wideModal(): boolean {
+      return this.waitingfor?.type === 'card' || needsColonies(this.waitingfor);
+    },
     Phase(): typeof Phase {
       return Phase;
     },

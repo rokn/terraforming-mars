@@ -3470,8 +3470,330 @@ body:has(#game-end.tm-end--app) {
   }
 }
 
-// Prelude phase: the dialog with the preludes can be closed to look at the board, and opened again.
-.tm-prelude-reopen {
+// A choice dialog (preludes, colony tiles) can be closed to look at the board, and opened again.
+.tm-dialog-reopen {
   width: 100%;
   margin: 4px 0 12px;
+}
+
+// ---------------------------------------------------------------------------
+// Centre stage views (Mars, Colonies) and the Colonies expansion.
+// ---------------------------------------------------------------------------
+
+// The segmented control that switches the centre stage, next to the panel's title.
+.tm-board-head .tm-view-tabs {
+  margin-right: auto;
+  align-self: center;
+}
+.tm-view-tabs {
+  display: inline-flex;
+  border: 1px solid @tm_line_button;
+}
+.tm-view-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border: 0;
+  background: transparent;
+  color: @tm_text_body;
+  cursor: pointer;
+  .tm-display(14px, 700);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+
+  & + & {
+    border-left: 1px solid @tm_line_button;
+  }
+  &:hover,
+  &:focus-visible {
+    color: @tm_text;
+    background: @tm_bg_hot;
+  }
+  .tm-kbd {
+    height: 15px;
+    min-width: 15px;
+    font-size: 9px;
+  }
+}
+.tm-view-tab--on,
+.tm-view-tab--on:hover {
+  background: @tm_text;
+  color: @tm_bg;
+
+  .tm-kbd {
+    color: @tm_bg;
+    background: transparent;
+    border-color: @tm_bg;
+  }
+}
+
+// The Colonies view: the fleets line, then the tiles fitted to the rest of the panel.
+.tm-colonies-view {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.tm-colonies-fit {
+  flex: 1 1 0;
+  min-height: 0;
+}
+.tm-fleets {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 16px;
+  padding: 5px 10px;
+  background: @tm_bg_deep;
+  border: 1px solid @tm_line;
+  font-family: @tm_font_mono;
+  font-size: 12px;
+  color: @tm_text_body;
+}
+.tm-fleets-title {
+  .tm-caption(10px);
+}
+.tm-fleet {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.tm-fleet--none {
+  opacity: 0.55;
+}
+.tm-fleet-name {
+  .tm-display(14px, 700);
+  letter-spacing: 0.04em;
+}
+.tm-fleet-ships {
+  display: inline-flex;
+  gap: 1px;
+}
+.tm-fleet-count {
+  font-weight: 600;
+  color: @tm_text;
+}
+.tm-fleets-pick {
+  margin-left: auto;
+  color: @tm_accent_soft;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+.tm-fleet-icon {
+  flex: none;
+}
+.tm-colonies-grid {
+  display: grid;
+  gap: 18px;
+  padding: 4px;
+}
+
+// A colony tile with its status strip. The tile is the old image-based one, drawn at 418px.
+.tm-colony-tile {
+  position: relative;
+  width: 418px;
+  display: flex;
+  flex-direction: column;
+  background: @tm_bg_panel;
+  border: 1px solid @tm_line_strong;
+  outline: 3px solid transparent;
+  outline-offset: 2px;
+
+  .colony-card {
+    margin: 0;
+    border-radius: 0;
+    cursor: inherit;
+  }
+  // The trade marker, lit so it reads at the fitted size.
+  .colony-track-marker {
+    filter: drop-shadow(0 0 3px @tm_accent) drop-shadow(0 0 1px #000);
+  }
+}
+.tm-colony-tile-card {
+  position: relative;
+}
+.tm-colony-tile-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 16px;
+  min-height: 50px;
+  padding: 6px 14px;
+  border-top: 1px solid @tm_line_strong;
+  font-family: @tm_font_mono;
+  font-size: 20px;
+  color: @tm_text_body;
+}
+.tm-colony-tile-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.tm-colony-tile-key {
+  .tm-caption(15px);
+}
+.tm-colony-tile-value {
+  .tm-display(28px);
+  color: @tm_text;
+}
+.tm-colony-tile-docked {
+  margin-left: auto;
+  .tm-display(24px, 700);
+  letter-spacing: 0.04em;
+  color: @tm_text;
+}
+.tm-colony-tile--inactive {
+  border-style: dashed;
+
+  .colony-card {
+    filter: grayscale(0.85) brightness(0.45);
+  }
+}
+.tm-colony-tile-inactive {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  pointer-events: none;
+  text-align: center;
+}
+.tm-colony-tile-inactive-label {
+  .tm-stencil(34px);
+  padding: 4px 18px;
+  color: @tm_text;
+  background: fade(@tm_bg, 85%);
+  border: 2px solid @tm_line_button;
+  letter-spacing: 0.14em;
+}
+.tm-colony-tile-inactive-hint {
+  padding: 2px 10px;
+  font-size: 16px;
+  color: @tm_text;
+  background: fade(@tm_bg, 85%);
+}
+.tm-colony-tile--selectable {
+  cursor: pointer;
+  border-color: @tm_accent_soft;
+
+  &:hover,
+  &:focus-visible {
+    outline-color: @tm_accent_soft;
+  }
+}
+.tm-colony-tile--selected,
+.tm-colony-tile--selected:hover {
+  border-color: @tm_accent;
+  outline-color: @tm_accent;
+  box-shadow: 0 0 24px fade(@tm_accent, 45%);
+}
+.tm-colony-tile--dimmed {
+  opacity: 0.4;
+}
+.tm-colony-tile-check {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: inline-flex;
+  padding: 6px;
+  background: @tm_accent;
+  color: @tm_bg;
+}
+
+// Choosing a colony in a dialog: the tiles large and clickable.
+.tm-colony-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  padding: 4px;
+
+  .tm-colony-tile {
+    zoom: 0.85;
+  }
+}
+@media (max-height: 820px) {
+  .tm-colony-choices .tm-colony-tile {
+    zoom: 0.7;
+  }
+}
+// Trading: the colony first, then how to pay, as one row of choices.
+.tm-play-modal-body .wf-options:has(> .wf-component--select-colony) {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  > .wf-component--select-colony {
+    order: -1;
+  }
+  > .wf-options {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 22px;
+
+    > label:first-child {
+      flex-basis: 100%;
+    }
+  }
+}
+
+// Choosing a colony in the narrow operations panel: names, with the tiles in the Colonies view.
+.tm-colony-picks {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px 10px;
+}
+.tm-colony-picks-hint {
+  margin: 4px 0 8px;
+  font-size: 12px;
+  color: @tm_text_muted;
+}
+
+// Per-player expansion counters in the corporation rows and the player boards tabs.
+.tm-xstats {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.tm-xstat {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-family: @tm_font_mono;
+  font-size: 11px;
+  font-weight: 600;
+  color: @tm_text_body;
+  white-space: nowrap;
+
+  svg {
+    color: @tm_text_muted;
+  }
+}
+.tm-sheet-tab .tm-xstats {
+  margin-left: 4px;
+}
+
+// Setup: the Colonies view needs more height than the map panel's minimum.
+.tm-setup-side > .tm-setup-map.tm-setup-map--colonies {
+  min-height: 560px;
+}
+// With expansion counters on the line, the hand count is a card glyph and a number.
+.tm-corp-cards-icon {
+  display: none;
+  color: @tm_text_muted;
+  vertical-align: -1px;
+}
+.tm-corp-foot:has(.tm-xstats) {
+  gap: 7px;
+
+  .tm-corp-cards-icon {
+    display: inline;
+  }
+  .tm-corp-cards-label {
+    display: none;
+  }
 }

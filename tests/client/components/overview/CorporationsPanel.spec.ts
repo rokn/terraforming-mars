@@ -4,6 +4,8 @@ import {globalConfig} from '../getLocalVue';
 import CorporationsPanel from '@/client/components/overview/CorporationsPanel.vue';
 import {fakeGameModel, fakePlayerViewModel, fakePublicPlayerModel} from '../testHelpers';
 import {CardName} from '@/common/cards/CardName';
+import {ColonyName} from '@/common/colonies/ColonyName';
+import {simpleColonyModel} from '@/common/models/ColonyModel';
 
 describe('CorporationsPanel', () => {
   const me = fakePublicPlayerModel({color: 'blue', name: 'Ada', isActive: true, terraformRating: 38, megacredits: 42,
@@ -50,5 +52,18 @@ describe('CorporationsPanel', () => {
       game: fakeGameModel({gameOptions: {...base.gameOptions, showTimers: false}}),
     });
     expect(mount(CorporationsPanel, {...globalConfig, props: {playerView: untimed}}).findAll('[data-test=timer]')).has.length(0);
+  });
+
+  it('shows trade fleets and colonies only in a Colonies game', () => {
+    const plain = mount(CorporationsPanel, {...globalConfig, props: {playerView}});
+    expect(plain.find('[data-test=expansion-stats]').exists()).is.false;
+
+    const colonies = fakePlayerViewModel({
+      thisPlayer: me,
+      players: [me, other],
+      game: fakeGameModel({colonies: [simpleColonyModel(ColonyName.LUNA)]}),
+    });
+    const wrapper = mount(CorporationsPanel, {...globalConfig, props: {playerView: colonies}});
+    expect(wrapper.findAll('[data-test=expansion-stats]')).has.length(2);
   });
 });

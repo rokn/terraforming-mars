@@ -105,6 +105,7 @@ import {getPreferences} from '@/client/utils/PreferencesManager';
 import {quickActions, takeRequestedAction, takeRequestedCard} from '@/client/utils/quickActions';
 import {ActionKind, actionKind} from '@/client/utils/actionKind';
 import {CardName} from '@/common/cards/CardName';
+import {needsColonies} from '@/client/utils/centerView';
 
 type Entry = {
   /** Index in `playerinput.options`. */
@@ -135,6 +136,14 @@ const ICONS: Record<ActionKind, string> = {
 };
 
 const END_KINDS: ReadonlyArray<ActionKind> = ['pass', 'end', 'undo'];
+
+/* The number of colony tiles to choose from in `option`. */
+function colonyChoices(option: PlayerInputModel): number {
+  if (option.type === 'colony') {
+    return option.coloniesModel.length;
+  }
+  return option.type === 'or' || option.type === 'and' ? Math.max(0, ...option.options.map(colonyChoices)) : 0;
+}
 
 function isDisplayed(option: PlayerInputModel): boolean {
   return !(option.type === 'card' && option.showOnlyInLearnerMode !== false && !getPreferences().learner_mode);
@@ -168,6 +177,17 @@ export default defineComponent({
   },
   components: {
     AppButton,
+  },
+  inject: {
+    parentCompactColonies: {
+      from: 'compactColonies',
+      default: () => () => false,
+    },
+  },
+  provide() {
+    return {
+      compactColonies: () => !this.detailInModal && (this.parentCompactColonies as () => boolean)(),
+    };
   },
   data() {
     return {
@@ -207,10 +227,11 @@ export default defineComponent({
     requestedCard(): CardName | undefined {
       return quickActions.card;
     },
-    /* True when the open action is a list of cards: it shows in a large dialog, where cards are readable. */
+    /* True when the open action is a list of cards or colony tiles: it shows in a large dialog, where they are readable. */
     detailInModal(): boolean {
       const option = this.openOption;
-      return this.hasHome && this.openIdx !== undefined && option !== undefined && (option.type === 'card' || option.type === 'projectCard');
+      return this.hasHome && this.openIdx !== undefined && option !== undefined &&
+        (option.type === 'card' || option.type === 'projectCard' || needsColonies(option));
     },
     requestedAction(): CardName | undefined {
       return quickActions.actionCard;
@@ -246,10 +267,23 @@ export default defineComponent({
         const label = actionKind(option) === 'play' ? 'playable' : 'available';
         return {hint: available + ' ' + this.$t(label), muted: available === 0};
       }
+      if (needsColonies(option)) {
+        return {hint: this.colonyHint(option), muted: false};
+      }
       if (option.type === 'or') {
         return {hint: option.options.length + ' ' + this.$t('choices'), muted: false};
       }
       return {hint: undefined, muted: false};
+    },
+    /* The number of colony tiles `option` offers, and for trading, the fleets this player has free. */
+    colonyHint(option: PlayerInputModel): string {
+      const tiles = colonyChoices(option);
+      const player = this.playerView.thisPlayer;
+      const hint = tiles + ' ' + this.$t('colonies');
+      if (actionKind(option) !== 'trade' || player === undefined) {
+        return hint;
+      }
+      return hint + ' · ' + (player.fleetSize - player.tradesThisGeneration) + ' ' + this.$t('fleets free');
     },
     kindOf(option: PlayerInputModel): ActionKind {
       return actionKind(option);
@@ -336,6 +370,10 @@ export default defineComponent({
       const option = this.openOption;
       if (option === undefined) {
         return;
+      }
+      // What the action asks next shows in a dialog too.
+      if (this.detailInModal) {
+        quickActions.followUp = true;
       }
       this.onsave({type: 'or', index: this.playerinput.options.indexOf(option), response: out});
     },

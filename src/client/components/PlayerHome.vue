@@ -35,8 +35,12 @@
         <main class="tm-center tm-panel tm-panel--large">
           <div class="tm-panel-inner">
             <div class="tm-board-head">
-              <h2 class="tm-board-title" v-i18n>{{ boardTitle }}</h2>
-              <span class="tm-section-caption" data-test="board-stats">
+              <h2 class="tm-board-title" v-i18n>{{ shownView === 'colonies' ? 'Colonies' : boardTitle }}</h2>
+              <CenterViewTabs :views="views" :modelValue="shownView" @update:modelValue="chooseView" />
+              <span v-if="shownView === 'colonies'" class="tm-section-caption" data-test="board-stats">
+                {{ game.colonies.length }} <span v-i18n>tiles</span> · {{ builtColonyCount }} <span v-i18n>colonies built</span>
+              </span>
+              <span v-else class="tm-section-caption" data-test="board-stats">
                 {{ marsSpaceCount }} <span v-i18n>areas</span> · {{ placedTileCount }} <span v-i18n>tiles placed</span>
               </span>
             </div>
@@ -47,7 +51,14 @@
                 <a class="tm-button tm-button--primary" :href="'the-end?id='+ playerView.id" v-i18n>Go to game results</a>
               </span>
             </div>
-            <FitToBox class="tm-board-fit" zoomable>
+            <ColoniesView v-if="shownView === 'colonies'"
+              :colonies="game.colonies"
+              :players="playerView.players"
+              :selectable="colonyPick.offered"
+              :selected="colonyPick.selected"
+              :fadeMarker="colonyPick.build"
+              @select="colonyPick.selected = $event" />
+            <FitToBox v-show="shownView === 'mars'" class="tm-board-fit" zoomable>
               <div class="player_home_block tm-board-block">
                 <GameBoardView
                   ref="gameBoardView"
@@ -70,7 +81,7 @@
               <h2 class="tm-section-title tm-section-title--large" v-i18n>Operations</h2>
               <span v-if="isPlayerActing(playerView)" class="tm-ops-turn" v-i18n>Your move</span>
             </div>
-            <button v-if="choosingPrelude && preludeDismissed" type="button" class="tm-button tm-button--primary tm-prelude-reopen" data-test="prelude-reopen" @click="preludeDismissed = false" v-i18n>Show preludes</button>
+            <button v-if="reopenLabel !== undefined" type="button" class="tm-button tm-button--primary tm-dialog-reopen" data-test="dialog-reopen" @click="dialogDismissed = false" v-i18n>{{ reopenLabel }}</button>
             <WaitingFor v-if="game.phase !== 'end'" actionMenu :modal="followUpModal" @dismiss="dismissFollowUp()"
               :modalTitle="choosingPrelude ? 'Play a prelude' : undefined"
               :modalCaption="choosingPrelude ? preludeCaption : undefined"
@@ -86,6 +97,7 @@
                 :aria-selected="p.color === boardsColor" data-test="board-tab" @click="showPlayer(p.color)">
                 <PlayerCube :color="p.color" :size="16" />
                 <span>{{ p.color === thisPlayer.color ? $t('You') : p.name }}</span>
+                <PlayerExpansionStats :player="p" :game="game" />
               </button>
             </div>
           </template>
@@ -159,27 +171,11 @@
         <SidePanel :open="panel === 'log'" title="Game log" @close="panel = undefined">
           <a class="hotkey-target"></a>
           <div class="player_home_block nofloat" id="log">
-            <LogPanel :viewModel="playerView" :step="game.step" @spaceClicked="onSpaceClicked" />
+            <LogPanel :viewModel="playerView" :step="game.step" @spaceClicked="showSpace" />
           </div>
           <div class="tm-footer">
             <a :href="'/spectator?id=' +game.spectatorId" target="_blank" rel="noopener noreferrer" v-i18n>Spectator link</a>
             <PurgeWarning :expectedPurgeTimeMs="game.expectedPurgeTimeMs" />
-          </div>
-        </SidePanel>
-
-        <SidePanel v-if="game.colonies.length > 0" :open="panel === 'colonies'" title="Colonies" @close="panel = undefined">
-          <div class="player_home_block" ref="colonies" id="shortkey-colonies">
-            <a name="colonies" class="player_home_anchor hotkey-target"></a>
-            <div class="colonies-fleets-cont">
-              <div class="colonies-player-fleets" v-for="colonyPlayer in playerView.players" :key="colonyPlayer.color">
-                <div :class="'colonies-fleet colonies-fleet-'+ colonyPlayer.color" v-for="idx in getFleetsCountRange(colonyPlayer)" :key="idx"></div>
-              </div>
-            </div>
-            <div class="player_home_colony_cont">
-              <div class="player_home_colony" v-for="colony in game.colonies" :key="colony.name">
-                <Colony :colony="colony" :active="colony.isActive" />
-              </div>
-            </div>
           </div>
         </SidePanel>
 
@@ -224,10 +220,6 @@
           <button type="button" class="tm-dock-button" :class="{'tm-dock-button--on': panel === 'log'}" data-test="open-log" @click="openPanel('log')">
             <span class="tm-dock-button-label" v-i18n>Game log</span>
           </button>
-          <button v-if="game.colonies.length > 0" type="button" class="tm-dock-button" :class="{'tm-dock-button--on': panel === 'colonies'}" data-test="open-colonies" @click="openPanel('colonies')">
-            <span class="tm-dock-button-label" v-i18n>Colonies</span>
-            <span class="tm-dock-button-count">{{ game.colonies.length }}</span>
-          </button>
           <button v-if="playerView.draftedCards.length > 0" type="button" class="tm-dock-button" :class="{'tm-dock-button--on': panel === 'drafted'}" data-test="open-drafted" @click="openPanel('drafted')">
             <span class="tm-dock-button-label" v-i18n>Drafted cards</span>
             <span class="tm-dock-button-count">{{ playerView.draftedCards.length }}</span>
@@ -247,7 +239,9 @@ import {defineComponent} from 'vue';
 import Card from '@/client/components/card/Card.vue';
 import WaitingFor from '@/client/components/WaitingFor.vue';
 import Sidebar from '@/client/components/Sidebar.vue';
-import Colony from '@/client/components/colonies/Colony.vue';
+import ColoniesView from '@/client/components/colonies/ColoniesView.vue';
+import CenterViewTabs from '@/client/components/common/CenterViewTabs.vue';
+import PlayerExpansionStats from '@/client/components/overview/PlayerExpansionStats.vue';
 import LogPanel from '@/client/components/logpanel/LogPanel.vue';
 import GameBoardView from '@/client/components/GameBoardView.vue';
 import PlayerSetupView from '@/client/components/PlayerSetupView.vue';
@@ -269,6 +263,8 @@ import SidePanel from '@/client/components/common/SidePanel.vue';
 import PlayerCube from '@/client/components/common/PlayerCube.vue';
 import {actionableCards, playableCards, quickActions, requestAction, requestPlay} from '@/client/utils/quickActions';
 import {isActionMenu, isPreludeChoice} from '@/client/utils/actionKind';
+import {CenterView, centerViewForKey, centerViews, colonyPick, loadCenterView, needsColonies, saveCenterView, viewForInput} from '@/client/utils/centerView';
+import {SpaceId} from '@/common/Types';
 import {translateTextWithParams} from '@/client/directives/i18n';
 import {KeyboardNavigation} from '@/client/components/KeyboardNavigation';
 import {CardName} from '@/common/cards/CardName';
@@ -297,11 +293,13 @@ type PlayerHomeModel = {
   panel: Panel | undefined;
   /** Current sort order of the hand, or undefined before the player picks one and after they reorder by hand. */
   handSortOrder: SortOrder | undefined;
-  /** True when the player closed the prelude phase dialog to look around. */
-  preludeDismissed: boolean;
+  /** True when the player closed the dialog of the prelude phase or of a colony choice to look around. */
+  dialogDismissed: boolean;
+  /** The view the player last chose for the centre stage, or that a choice switched it to. */
+  centerView: CenterView;
 }
 
-type Panel = 'log' | 'colonies' | 'drafted';
+type Panel = 'log' | 'drafted';
 
 type ToggleableCardType = 'HAND' | 'ACTIVE' | 'AUTOMATED' | 'EVENT';
 
@@ -325,7 +323,8 @@ export default defineComponent({
       showOwnBoard: false,
       panel: undefined,
       handSortOrder: undefined,
-      preludeDismissed: false,
+      dialogDismissed: false,
+      centerView: loadCenterView() ?? 'mars',
     };
   },
   watch: {
@@ -335,17 +334,20 @@ export default defineComponent({
       if (waitingFor === undefined || waitingFor.optional || isActionMenu(waitingFor)) {
         quickActions.followUp = false;
       }
-      // Each new prelude choice opens in its dialog again.
-      this.preludeDismissed = false;
+      // Each new prelude or colony choice opens in its dialog again.
+      this.dialogDismissed = false;
       // Picking a space needs the board: move panels out of the way.
       if (waitingFor?.type === 'space') {
         this.closeSidePanels();
       }
+      this.showNeededView();
     },
     // Choosing cards in a dialog or at the start of research: side panels would only be in the way.
     followUpModal(open: boolean) {
       if (open) {
         this.closeSidePanels();
+      } else {
+        this.showNeededView();
       }
     },
     isResearching(researching: boolean) {
@@ -402,6 +404,31 @@ export default defineComponent({
     choosingPrelude(): boolean {
       return isPreludeChoice(this.playerView.waitingFor);
     },
+    /* True while the player is asked to pick a colony tile, outside the action menu. */
+    choosingColony(): boolean {
+      const waitingFor = this.playerView.waitingFor;
+      return waitingFor !== undefined && !waitingFor.optional && !isActionMenu(waitingFor) && needsColonies(waitingFor);
+    },
+    /* The label of the button that reopens a closed choice dialog, when there is one. */
+    reopenLabel(): string | undefined {
+      if (!this.dialogDismissed) {
+        return undefined;
+      }
+      return this.choosingPrelude ? 'Show preludes' : this.choosingColony ? 'Show colony tiles' : undefined;
+    },
+    /* The centre views this game has. */
+    views(): Array<CenterView> {
+      return centerViews(this.game);
+    },
+    shownView(): CenterView {
+      return this.views.includes(this.centerView) ? this.centerView : 'mars';
+    },
+    colonyPick(): typeof colonyPick {
+      return colonyPick;
+    },
+    builtColonyCount(): number {
+      return this.game.colonies.reduce((sum, colony) => sum + colony.colonies.length, 0);
+    },
     preludeCaption(): string {
       const left = this.playerView.preludeCardsInHand.length;
       return translateTextWithParams('Prelude phase · ${0} left to play. Close this to look at the board.', [String(left)]);
@@ -422,8 +449,10 @@ export default defineComponent({
     followUpModal(): boolean {
       const waitingFor = this.playerView.waitingFor;
       // In the prelude phase, choosing a prelude and what it asks for next show as a dialog too.
-      const preludes = this.game.phase === Phase.PRELUDES && !this.preludeDismissed;
-      return (quickActions.followUp || preludes) && waitingFor !== undefined && !waitingFor.optional && !this.isResearching &&
+      const preludes = this.game.phase === Phase.PRELUDES && !this.dialogDismissed;
+      // Colony tiles do not fit the operations panel.
+      const colonies = this.choosingColony && !this.dialogDismissed;
+      return (quickActions.followUp || preludes || colonies) && waitingFor !== undefined && !waitingFor.optional && !this.isResearching &&
         !isActionMenu(waitingFor) && waitingFor.type !== 'space';
     },
     /* True while the action menu asks the player to pick a card from their hand. */
@@ -515,6 +544,7 @@ export default defineComponent({
 
   mounted() {
     window.addEventListener('keydown', this.onShortcut);
+    this.showNeededView();
   },
   beforeUnmount() {
     window.removeEventListener('keydown', this.onShortcut);
@@ -532,7 +562,9 @@ export default defineComponent({
     OtherPlayer,
     WaitingFor,
     Sidebar,
-    Colony,
+    ColoniesView,
+    CenterViewTabs,
+    PlayerExpansionStats,
     LogPanel,
     SortableCards,
     CardSortButtons,
@@ -559,7 +591,7 @@ export default defineComponent({
     /* Opens the play-card action for `card`, so the player only has to pay. */
     playCard(card: CardName): void {
       if (this.choosingPrelude) {
-        this.preludeDismissed = false;
+        this.dialogDismissed = false;
         return;
       }
       requestPlay(card);
@@ -577,7 +609,29 @@ export default defineComponent({
     /* Moves a follow-up question out of its dialog and into the operations panel. */
     dismissFollowUp(): void {
       quickActions.followUp = false;
-      this.preludeDismissed = true;
+      this.dialogDismissed = true;
+    },
+    /* Shows `view` in the centre stage and remembers the choice. */
+    chooseView(view: CenterView): void {
+      this.centerView = view;
+      saveCenterView(view);
+    },
+    /* Switches the centre stage to the view the current choice needs, unless a dialog already shows it. */
+    showNeededView(): void {
+      const waitingFor = this.playerView.waitingFor;
+      if (waitingFor === undefined || waitingFor.optional || isActionMenu(waitingFor)) {
+        return;
+      }
+      const view = viewForInput(waitingFor);
+      if (view === undefined || !this.views.includes(view) || (view !== 'mars' && this.followUpModal)) {
+        return;
+      }
+      this.centerView = view;
+    },
+    /* Shows the space with `spaceId` on Mars, as a log entry asks. */
+    showSpace(spaceId: SpaceId): void {
+      this.centerView = 'mars';
+      this.onSpaceClicked(spaceId);
     },
     closeSidePanels(): void {
       this.closeBoards();
@@ -619,6 +673,12 @@ export default defineComponent({
         this.confirmDialog(event);
         return;
       }
+      const view = centerViewForKey(event);
+      if (view !== undefined && this.hasTableau && this.views.includes(view)) {
+        event.preventDefault();
+        this.chooseView(view);
+        return;
+      }
       if (event.code !== KeyboardNavigation.TABLEAU || event.shiftKey || event.ctrlKey || event.metaKey || event.altKey) {
         return;
       }
@@ -645,13 +705,6 @@ export default defineComponent({
       }
       this.closeBoards();
       this.panel = panel;
-    },
-    getFleetsCountRange(player: PublicPlayerModel): Array<number> {
-      const fleetsRange = [];
-      for (let i = 0; i < player.fleetSize - player.tradesThisGeneration; i++) {
-        fleetsRange.push(i);
-      }
-      return fleetsRange;
     },
     toggle(type: ToggleableCardType): void {
       this[typeToDataModel[type].key] = !this[typeToDataModel[type].key];
