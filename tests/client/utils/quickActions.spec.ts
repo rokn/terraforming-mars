@@ -2,7 +2,7 @@ import {expect} from 'chai';
 import {CardName} from '@/common/cards/CardName';
 import {PlayerInputModel, SelectProjectCardToPlayModel} from '@/common/models/PlayerInputModel';
 import {actionableCards, playableCards, requestAction, requestPlay, takeRequestedAction, takeRequestedCard} from '@/client/utils/quickActions';
-import {isActionMenu} from '@/client/utils/actionKind';
+import {isActionMenu, isPreludeChoice} from '@/client/utils/actionKind';
 
 describe('quickActions', () => {
   it('lists enabled cards from a play card option', () => {
@@ -43,5 +43,12 @@ describe('quickActions', () => {
     requestAction(CardName.BIRDS);
     expect(takeRequestedAction()).eq(CardName.BIRDS);
     expect(takeRequestedAction()).is.undefined;
+  });
+
+  it('recognizes the prelude phase choice', () => {
+    const choice = {type: 'card', title: 'Select prelude card to play', buttonLabel: 'Play', cards: []} as unknown as PlayerInputModel;
+    expect(isPreludeChoice(choice)).is.true;
+    expect(isPreludeChoice({...choice, title: 'Select card to discard'} as PlayerInputModel)).is.false;
+    expect(isPreludeChoice(undefined)).is.false;
   });
 });

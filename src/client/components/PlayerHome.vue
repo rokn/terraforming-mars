@@ -70,7 +70,11 @@
               <h2 class="tm-section-title tm-section-title--large" v-i18n>Operations</h2>
               <span v-if="isPlayerActing(playerView)" class="tm-ops-turn" v-i18n>Your move</span>
             </div>
-            <WaitingFor v-if="game.phase !== 'end'" actionMenu :modal="followUpModal" @dismiss="dismissFollowUp()" :playerView="playerView" :waitingfor="playerView.waitingFor" :requestId="playerView.requestId" />
+            <button v-if="choosingPrelude && preludeDismissed" type="button" class="tm-button tm-button--primary tm-prelude-reopen" data-test="prelude-reopen" @click="preludeDismissed = false" v-i18n>Show preludes</button>
+            <WaitingFor v-if="game.phase !== 'end'" actionMenu :modal="followUpModal" @dismiss="dismissFollowUp()"
+              :modalTitle="choosingPrelude ? 'Play a prelude' : undefined"
+              :modalCaption="choosingPrelude ? preludeCaption : undefined"
+              :playerView="playerView" :waitingfor="playerView.waitingFor" :requestId="playerView.requestId" />
           </div>
         </aside>
 
@@ -117,6 +121,9 @@
             <h3 class="tm-section-title" v-i18n>Played Cards</h3>
             <div class="player_home_block player_home_block--cards">
               <div v-for="card in getCardsByType(thisPlayer.tableau, [CardType.CORPORATION])" :key="card.name" class="cardbox" :class="actionClass(card.name)" @click="useAction(card.name)">
+                <Card :card="card" :actionUsed="isCardActivated(card, thisPlayer)" :cubeColor="thisPlayer.color" />
+              </div>
+              <div v-for="card in preludeTableauCards" :key="card.name" class="cardbox cardbox--prelude" :class="actionClass(card.name)" data-test="tableau-prelude" @click="useAction(card.name)">
                 <Card :card="card" :actionUsed="isCardActivated(card, thisPlayer)" :cubeColor="thisPlayer.color" />
               </div>
               <div v-for="card in getCardsByType(thisPlayer.tableau, [CardType.CEO])" :key="card.name" class="cardbox" :class="actionClass(card.name)" @click="useAction(card.name)">
@@ -261,7 +268,8 @@ import FitToBox from '@/client/components/common/FitToBox.vue';
 import SidePanel from '@/client/components/common/SidePanel.vue';
 import PlayerCube from '@/client/components/common/PlayerCube.vue';
 import {actionableCards, playableCards, quickActions, requestAction, requestPlay} from '@/client/utils/quickActions';
-import {isActionMenu} from '@/client/utils/actionKind';
+import {isActionMenu, isPreludeChoice} from '@/client/utils/actionKind';
+import {translateTextWithParams} from '@/client/directives/i18n';
 import {KeyboardNavigation} from '@/client/components/KeyboardNavigation';
 import {CardName} from '@/common/cards/CardName';
 import StackedCards from '@/client/components/StackedCards.vue';
@@ -289,6 +297,8 @@ type PlayerHomeModel = {
   panel: Panel | undefined;
   /** Current sort order of the hand, or undefined before the player picks one and after they reorder by hand. */
   handSortOrder: SortOrder | undefined;
+  /** True when the player closed the prelude phase dialog to look around. */
+  preludeDismissed: boolean;
 }
 
 type Panel = 'log' | 'colonies' | 'drafted';
@@ -315,6 +325,7 @@ export default defineComponent({
       showOwnBoard: false,
       panel: undefined,
       handSortOrder: undefined,
+      preludeDismissed: false,
     };
   },
   watch: {
@@ -324,6 +335,8 @@ export default defineComponent({
       if (waitingFor === undefined || waitingFor.optional || isActionMenu(waitingFor)) {
         quickActions.followUp = false;
       }
+      // Each new prelude choice opens in its dialog again.
+      this.preludeDismissed = false;
       // Picking a space needs the board: move panels out of the way.
       if (waitingFor?.type === 'space') {
         this.closeSidePanels();
@@ -380,7 +393,18 @@ export default defineComponent({
     /* While this player is choosing an action, the hand cards they can play now. */
     handPlayable(): Array<CardName> | undefined {
       const waitingFor = this.playerView.waitingFor;
+      if (this.choosingPrelude && waitingFor?.type === 'card') {
+        return waitingFor.cards.map((c) => c.name);
+      }
       return waitingFor !== undefined && !waitingFor.optional ? playableCards(waitingFor) : undefined;
+    },
+    /* True while the prelude phase asks this player which prelude to play. */
+    choosingPrelude(): boolean {
+      return isPreludeChoice(this.playerView.waitingFor);
+    },
+    preludeCaption(): string {
+      const left = this.playerView.preludeCardsInHand.length;
+      return translateTextWithParams('Prelude phase · ${0} left to play. Close this to look at the board.', [String(left)]);
     },
     /* While this player is choosing an action, the played cards whose action they can use now. */
     tableauActionable(): Array<CardName> {
@@ -397,7 +421,9 @@ export default defineComponent({
      */
     followUpModal(): boolean {
       const waitingFor = this.playerView.waitingFor;
-      return quickActions.followUp && waitingFor !== undefined && !waitingFor.optional && !this.isResearching &&
+      // In the prelude phase, choosing a prelude and what it asks for next show as a dialog too.
+      const preludes = this.game.phase === Phase.PRELUDES && !this.preludeDismissed;
+      return (quickActions.followUp || preludes) && waitingFor !== undefined && !waitingFor.optional && !this.isResearching &&
         !isActionMenu(waitingFor) && waitingFor.type !== 'space';
     },
     /* True while the action menu asks the player to pick a card from their hand. */
@@ -456,18 +482,22 @@ export default defineComponent({
       return getCardsByType(this.thisPlayer.tableau, [CardType.ACTIVE]).length;
     },
     automatedTableauCount(): number {
-      return getCardsByType(this.thisPlayer.tableau, [CardType.AUTOMATED, CardType.PRELUDE]).length;
+      return getCardsByType(this.thisPlayer.tableau, [CardType.AUTOMATED]).length;
     },
     eventTableauCount(): number {
       return getCardsByType(this.thisPlayer.tableau, [CardType.EVENT]).length;
     },
     activeTableauCards(): Array<CardModel> {
-      const cards = getCardsByType(this.thisPlayer.tableau, [CardType.ACTIVE, CardType.PRELUDE]);
+      const cards = getCardsByType(this.thisPlayer.tableau, [CardType.ACTIVE]);
       return [...sortActiveCards(cards.filter((c) => this.isActive(c)))];
     },
     automatedTableauCards(): Array<CardModel> {
-      const cards = getCardsByType(this.thisPlayer.tableau, [CardType.AUTOMATED, CardType.PRELUDE]);
+      const cards = getCardsByType(this.thisPlayer.tableau, [CardType.AUTOMATED]);
       return cards.filter((c) => this.isNotActive(c));
+    },
+    /* Played preludes, shown as their own group after the corporation, whether or not they have an action. */
+    preludeTableauCards(): ReadonlyArray<CardModel> {
+      return getCardsByType(this.thisPlayer.tableau, [CardType.PRELUDE]);
     },
     eventTableauCards(): Array<CardModel> {
       return [...getCardsByType(this.thisPlayer.tableau, [CardType.EVENT])];
@@ -528,6 +558,10 @@ export default defineComponent({
     },
     /* Opens the play-card action for `card`, so the player only has to pay. */
     playCard(card: CardName): void {
+      if (this.choosingPrelude) {
+        this.preludeDismissed = false;
+        return;
+      }
       requestPlay(card);
     },
     /* Opens the player boards panel on the player with `color`. */
@@ -543,6 +577,7 @@ export default defineComponent({
     /* Moves a follow-up question out of its dialog and into the operations panel. */
     dismissFollowUp(): void {
       quickActions.followUp = false;
+      this.preludeDismissed = true;
     },
     closeSidePanels(): void {
       this.closeBoards();
@@ -569,7 +604,11 @@ export default defineComponent({
       }
       const primary = dialog.querySelectorAll<HTMLButtonElement>('[data-primary]:not(:disabled)');
       const submits = dialog.querySelectorAll<HTMLButtonElement>('.btn-submit:not(:disabled)');
-      const button = primary.length > 0 ? primary[primary.length - 1] : (submits.length === 1 ? submits[0] : undefined);
+      // Some inputs (such as choosing a resource) have one plain button.
+      const buttons = dialog.querySelectorAll<HTMLButtonElement>('.btn:not(:disabled)');
+      const button = primary.length > 0 ? primary[primary.length - 1] :
+        submits.length === 1 ? submits[0] :
+          buttons.length === 1 ? buttons[0] : undefined;
       if (button !== undefined) {
         event.preventDefault();
         button.click();

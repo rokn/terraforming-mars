@@ -4,10 +4,12 @@ import {globalConfig} from './getLocalVue';
 import PlayerHome from '@/client/components/PlayerHome.vue';
 import CardSortButtons from '@/client/components/CardSortButtons.vue';
 import SortableCards from '@/client/components/SortableCards.vue';
-import {fakePlayerViewModel, fakePublicPlayerModel} from './testHelpers';
+import {fakeGameModel, fakePlayerViewModel, fakePublicPlayerModel} from './testHelpers';
 import {useFakeLocalStorage} from './FakeLocalStorage';
 import {CardName} from '@/common/cards/CardName';
 import raw_settings from '@/genfiles/settings.json';
+import WaitingFor from '@/client/components/WaitingFor.vue';
+import {Phase} from '@/common/Phase';
 
 describe('PlayerHome', () => {
   useFakeLocalStorage();
@@ -106,5 +108,43 @@ describe('PlayerHome', () => {
     document.body.dispatchEvent(new KeyboardEvent('keydown', {key: 'Enter', bubbles: true}));
     expect(pressed).eq('Buy');
     wrapper.unmount();
+  });
+
+  it('shows the prelude phase choice in a dialog, and played preludes as their own group', async () => {
+    const thisPlayer = fakePublicPlayerModel({tableau: [{name: CardName.ECOLINE}, {name: CardName.DONATION}]});
+    const playerView = fakePlayerViewModel({
+      thisPlayer,
+      players: [thisPlayer],
+      game: fakeGameModel({phase: Phase.PRELUDES}),
+      preludeCardsInHand: [{name: CardName.BIOFUELS}],
+      waitingFor: {type: 'card', title: 'Select prelude card to play', buttonLabel: 'Play', cards: [{name: CardName.BIOFUELS}], min: 1, max: 1},
+    });
+    const wrapper = shallowMount(PlayerHome, {
+      ...globalConfig,
+      parentComponent: {
+        methods: {
+          getVisibilityState: () => false,
+          setVisibilityState: () => {},
+        },
+      },
+      props: {
+        playerView,
+        settings: raw_settings,
+      },
+    });
+    const waitingFor = wrapper.findComponent(WaitingFor);
+    expect(waitingFor.props('modal')).is.true;
+    expect(waitingFor.props('modalTitle')).eq('Play a prelude');
+    expect(wrapper.findComponent(SortableCards).props('playable')).deep.eq([CardName.BIOFUELS]);
+    const vm = wrapper.vm as unknown as {preludeTableauCards: Array<{name: CardName}>, automatedTableauCount: number};
+    expect(vm.preludeTableauCards.map((c) => c.name)).deep.eq([CardName.DONATION]);
+    expect(vm.automatedTableauCount).eq(0);
+
+    // Closed to look at the board, it can be opened again.
+    waitingFor.vm.$emit('dismiss');
+    await wrapper.vm.$nextTick();
+    expect(waitingFor.props('modal')).is.false;
+    await wrapper.find('[data-test=prelude-reopen]').trigger('click');
+    expect(waitingFor.props('modal')).is.true;
   });
 });

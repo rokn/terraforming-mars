@@ -32,6 +32,9 @@
           <div v-for="card in getCardsByType(player.tableau, [CardType.CORPORATION])" :key="card.name" class="cardbox">
             <Card :card="card" :actionUsed="isCardActivated(card, player)" :cubeColor="player.color" />
           </div>
+          <div v-for="card in getCardsByType(player.tableau, [CardType.PRELUDE])" :key="card.name" class="cardbox cardbox--prelude" data-test="tableau-prelude">
+            <Card :card="card" :actionUsed="isCardActivated(card, player)" :cubeColor="player.color" />
+          </div>
           <div v-for="card in getCardsByType(player.tableau, [CardType.CEO])" :key="card.name" class="cardbox">
             <Card :card="card" :actionUsed="isCardActivated(card, player)" :cubeColor="player.color" />
           </div>
@@ -39,7 +42,7 @@
           <div v-for="card in sortActiveCards(getCardsByType(player.tableau, [CardType.ACTIVE]))" :key="card.name" class="cardbox">
             <Card :card="card" :actionUsed="isCardActivated(card, player)" :cubeColor="player.color" />
           </div>
-          <StackedCards :cards="getCardsByType(player.tableau, [CardType.AUTOMATED, CardType.PRELUDE])" :player="player" />
+          <StackedCards :cards="getCardsByType(player.tableau, [CardType.AUTOMATED])" :player="player" />
           <StackedCards :cards="getCardsByType(player.tableau, [CardType.EVENT])" :player="player" />
         </div>
       </div>

@@ -146,6 +146,20 @@ describe('SelectInitialCards', () => {
     const button = getButton(component);
     expect(button.attributes().disabled).not.to.be.undefined;
   });
+
+  it('counts the choices in each group', async () => {
+    const component = createComponent([CardName.ECOLINE, CardName.HELION], [CardName.ANTS, CardName.BIRDS], [CardName.ALLIED_BANK, CardName.SUPPLY_DROP]);
+    const counts = () => component.findAll('[data-test=setup-group-count]').map((c) => c.text());
+    expect(counts()).deep.eq(['0 of 1 chosen', '0 of 2 chosen', '0 bought · 0 M€']);
+
+    const selectCards = component.findAllComponents({name: 'select-card'});
+    selectCards[0].vm.$emit('cardschanged', [CardName.ECOLINE]);
+    selectCards[1].vm.$emit('cardschanged', [CardName.ALLIED_BANK]);
+    selectCards[2].vm.$emit('cardschanged', [CardName.ANTS]);
+    await component.vm.$nextTick();
+    expect(counts()).deep.eq(['1 of 1 chosen', '1 of 2 chosen', '1 bought · 3 M€']);
+    expect(component.find('.tm-setup-group-count--done').text()).eq('1 of 1 chosen');
+  });
 });
 
 function getButton(component: VueWrapper<InstanceType<typeof SelectInitialCards>>) {

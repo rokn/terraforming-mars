@@ -4,18 +4,42 @@
       message="Continue without buying any project cards?"
       ref="confirmation"
       @accept="confirmSelection" />
-    <SelectCard :playerView="playerView" :playerinput="corpCardOption" :showtitle="true" :onsave="noop" @cardschanged="corporationChanged" />
-    <div v-if="playerCanChooseAridor" class="player_home_colony_cont">
-      <div v-i18n>These are the colony tiles Aridor may choose from:</div>
-      <div class="discarded-colonies-for-aridor">
-        <div class="player_home_colony small_colony" v-for="colonyName in playerView.game.discardedColonies" :key="colonyName">
-          <Colony :colony="getColony(colonyName)" :active="getColony(colonyName).isActive" />
+    <section class="tm-setup-group" data-test="setup-group">
+      <div class="tm-setup-group-head">
+        <h3 class="tm-setup-group-title" v-i18n>Corporation</h3>
+        <span class="tm-setup-group-count" :class="countClass(selectedCorporations.length, 1)" data-test="setup-group-count">{{ countLabel(selectedCorporations.length, 1) }}</span>
+      </div>
+      <SelectCard :playerView="playerView" :playerinput="corpCardOption" :showtitle="false" :onsave="noop" @cardschanged="corporationChanged" />
+      <div v-if="playerCanChooseAridor" class="player_home_colony_cont">
+        <div v-i18n>These are the colony tiles Aridor may choose from:</div>
+        <div class="discarded-colonies-for-aridor">
+          <div class="player_home_colony small_colony" v-for="colonyName in playerView.game.discardedColonies" :key="colonyName">
+            <Colony :colony="getColony(colonyName)" :active="getColony(colonyName).isActive" />
+          </div>
         </div>
       </div>
-    </div>
-    <SelectCard v-if="hasPrelude" :playerView="playerView" :playerinput="preludeCardOption" :onsave="noop" :showtitle="true" @cardschanged="preludesChanged" />
-    <SelectCard v-if="hasCeo" :playerView="playerView" :playerinput="ceoCardOption" :onsave="noop" :showtitle="true" @cardschanged="ceosChanged" />
-    <SelectCard :playerView="playerView" :playerinput="projectCardOption" :onsave="noop" :showtitle="true" @cardschanged="cardsChanged" />
+    </section>
+    <section v-if="hasPrelude" class="tm-setup-group" data-test="setup-group">
+      <div class="tm-setup-group-head">
+        <h3 class="tm-setup-group-title" v-i18n>Preludes</h3>
+        <span class="tm-setup-group-count" :class="countClass(selectedPreludes.length, preludesToKeep)" data-test="setup-group-count">{{ countLabel(selectedPreludes.length, preludesToKeep) }}</span>
+      </div>
+      <SelectCard :playerView="playerView" :playerinput="preludeCardOption" :onsave="noop" :showtitle="false" @cardschanged="preludesChanged" />
+    </section>
+    <section v-if="hasCeo" class="tm-setup-group" data-test="setup-group">
+      <div class="tm-setup-group-head">
+        <h3 class="tm-setup-group-title" v-i18n>CEO</h3>
+        <span class="tm-setup-group-count" :class="countClass(selectedCeos.length, 1)" data-test="setup-group-count">{{ countLabel(selectedCeos.length, 1) }}</span>
+      </div>
+      <SelectCard :playerView="playerView" :playerinput="ceoCardOption" :onsave="noop" :showtitle="false" @cardschanged="ceosChanged" />
+    </section>
+    <section class="tm-setup-group" data-test="setup-group">
+      <div class="tm-setup-group-head">
+        <h3 class="tm-setup-group-title" v-i18n>Project cards</h3>
+        <span class="tm-setup-group-count" :class="{'tm-setup-group-count--done': selectedCards.length > 0}" data-test="setup-group-count">{{ projectsLabel }}</span>
+      </div>
+      <SelectCard :playerView="playerView" :playerinput="projectCardOption" :onsave="noop" :showtitle="false" @cardschanged="cardsChanged" />
+    </section>
     <div class="select-initial-cards-footer">
       <template v-if="selectedCorporations.length === 1">
         <div><span v-i18n>Starting M€:</span> <div class="starting-megacredits">{{ getStartingMegacredits() }}</div></div>
@@ -51,6 +75,7 @@ import {ColonyName} from '@/common/colonies/ColonyName';
 import {ColonyModel, simpleColonyModel} from '@/common/models/ColonyModel';
 import * as titles from '@/common/inputs/SelectInitialCards';
 import {sum} from '@/common/utils/utils';
+import {translateTextWithParams} from '@/client/directives/i18n';
 
 
 type DataModel = {
@@ -288,11 +313,11 @@ export default defineComponent({
         return false;
       }
       if (this.hasPrelude) {
-        if (this.selectedPreludes.length < 2) {
+        if (this.selectedPreludes.length < this.preludesToKeep) {
           this.warning = 'Select 2 preludes';
           return false;
         }
-        if (this.selectedPreludes.length > 2) {
+        if (this.selectedPreludes.length > this.preludesToKeep) {
           this.warning = 'You selected too many preludes';
           return false;
         }
@@ -319,6 +344,16 @@ export default defineComponent({
     confirmSelection() {
       this.saveData();
     },
+    /* The counter for a group where `required` cards must be chosen, such as "1 of 2 chosen". */
+    countLabel(chosen: number, required: number): string {
+      return translateTextWithParams('${0} of ${1} chosen', [String(chosen), String(required)]);
+    },
+    countClass(chosen: number, required: number): string | undefined {
+      if (chosen === required) {
+        return 'tm-setup-group-count--done';
+      }
+      return chosen > required ? 'tm-setup-group-count--over' : undefined;
+    },
     getColony(colonyName: ColonyName): ColonyModel {
       return simpleColonyModel(colonyName);
     },
@@ -330,10 +365,20 @@ export default defineComponent({
     playerCanChooseAridor() {
       return this.playerView.dealtCorporationCards.some((card) => card.name === CardName.ARIDOR);
     },
-    hasPrelude() {
+    hasPrelude(): boolean {
       return hasOption(this.playerinput.options, titles.SELECT_PRELUDE_TITLE);
     },
-    hasCeo() {
+    /* How many preludes the player keeps. */
+    preludesToKeep(): number {
+      return this.hasPrelude ? (this.preludeCardOption.min ?? 2) : 0;
+    },
+    /* The project cards counter: how many are bought and what they cost. */
+    projectsLabel(): string {
+      const corporation = this.selectedCorporations.length === 1 ? getCard(this.selectedCorporations[0]) : undefined;
+      const cost = this.selectedCards.length * (corporation?.cardCost ?? constants.CARD_COST);
+      return translateTextWithParams('${0} bought · ${1} M€', [String(this.selectedCards.length), String(cost)]);
+    },
+    hasCeo(): boolean {
       return hasOption(this.playerinput.options, titles.SELECT_CEO_TITLE);
     },
     corpCardOption() {

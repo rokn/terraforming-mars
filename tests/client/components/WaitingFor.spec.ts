@@ -264,4 +264,22 @@ describe('WaitingFor', () => {
 
     expect(polls).eq(2);
   });
+
+  it('titles the dialog, and widens it for a list of cards', () => {
+    const wrapper = shallowMount(WaitingFor, {
+      ...globalConfig,
+      global: {
+        ...globalConfig.global,
+        stubs: {'PlayerInputFactory': {template: '<div class="stub-pif"></div>'}},
+      },
+      props: {
+        playerView: playerView as PlayerViewModel,
+        modal: true,
+        modalTitle: 'Play a prelude',
+        waitingfor: {type: 'card', title: 'Select prelude card to play', buttonLabel: 'Play', cards: [], min: 1, max: 1, showOnlyInLearnerMode: false, selectBlueCardAction: false, showOwner: false, showSelectAll: false},
+      },
+    });
+    expect(wrapper.find('[data-test=followup-title]').text()).eq('Play a prelude');
+    expect(wrapper.find('.tm-play-modal-box--wide').exists()).is.true;
+  });
 });

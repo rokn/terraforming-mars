@@ -42,3 +42,8 @@ export function isActionMenu(input: PlayerInputModel | undefined): boolean {
     return kind === 'pass' || kind === 'end';
   });
 }
+
+/** True when `input` asks the player which of their preludes to play. */
+export function isPreludeChoice(input: PlayerInputModel | undefined): boolean {
+  return input?.type === 'card' && titleText(input) === 'Select prelude card to play';
+}

@@ -93,6 +93,12 @@ export default defineComponent({
     WarningsComponent,
     AppButton,
   },
+  mounted() {
+    // A choice of exactly one card, from one card: it starts chosen, so its button (or Enter) confirms it.
+    if (this.showsave && this.selectOnlyOneCard && this.selectableCards.length === 1 && this.playerinput.cards.length === 1) {
+      this.cards = this.selectableCards[0];
+    }
+  },
   watch: {
     cards() {
       this.$emit('cardschanged', this.cardNames);

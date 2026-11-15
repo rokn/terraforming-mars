@@ -12,11 +12,11 @@
       </template>
     </template>
     <div :class="{'tm-play-modal': modal}" :data-test="modal ? 'followup-modal' : undefined" @click.self="modal && $emit('dismiss')">
-      <div :class="{'tm-play-modal-box tm-followup-box': modal}">
+      <div :class="{'tm-play-modal-box tm-followup-box': modal, 'tm-play-modal-box--wide': modal && waitingfor?.type === 'card'}">
         <div v-if="modal" class="tm-play-modal-head">
           <div class="tm-followup-title">
-            <h2 class="tm-section-title tm-section-title--large" v-i18n>Your choice</h2>
-            <span class="tm-section-caption" v-i18n>This action has started. Close this to look around and finish it in Operations.</span>
+            <h2 class="tm-section-title tm-section-title--large" data-test="followup-title">{{ $t(modalTitle) }}</h2>
+            <span class="tm-section-caption">{{ $t(modalCaption) }}</span>
           </div>
           <button type="button" class="tm-sheet-close" :title="$t('Close')" :aria-label="$t('Close')" data-test="followup-close" @click="$emit('dismiss')">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="square" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19" /></svg>
@@ -116,6 +116,16 @@ export default defineComponent({
     modal: {
       type: Boolean,
       default: false,
+    },
+    /* The heading of the dialog, when `modal`. */
+    modalTitle: {
+      type: String,
+      default: 'Your choice',
+    },
+    /* The line under the dialog's heading, when `modal`. */
+    modalCaption: {
+      type: String,
+      default: 'This action has started. Close this to look around and finish it in Operations.',
     },
     /* When true, a top-level choice of actions shows as a menu of tiles rather than a radio list. */
     actionMenu: {
