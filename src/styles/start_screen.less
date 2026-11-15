@@ -1,133 +1,313 @@
+// Start screen: the main menu, in the dark rust theme of the in-game redesign.
+
 #app {
   position: relative;
 }
+
+// The App root wraps every screen in `.main-container` (with a sidebar margin) and appends the
+// "Not affiliated" `.notice`. On this screen they become a full-height column with the notice as its last row.
 .topmost-start-screen {
-  margin: 0px;
-  padding-bottom: 40px;
-  background: url(./assets/stars.jpg);
-  min-height: 100%;
-}
-
-.start-screen {
-  width: 400px;
-  margin: 0 auto;
-}
-
-.start-screen-game-title {
-  color: #daab63;
-  padding: 40px 0 10px 0;
-  margin: 0 auto;
-  text-align: center;
-}
-
-.start-screen-links {
-  margin: 0 auto;
-  padding-top: 50px;
-}
-
-.start-screen-link {
-  text-decoration: none;
-  cursor: pointer;
-  box-shadow: inset 0 0 0px 1px #333;
-  line-height: 28px;
-  border-radius: 10px;
-  color: #eee;
-  text-shadow:
-    0 0 2px black,
-    0 2px 1px black;
-  padding-left: 17px;
-  width: 369px;
-  height: 90px;
   display: flex;
-  margin-bottom: 5px;
-  font-size: 26px;
+  flex-direction: column;
+  min-height: 100%;
+  margin: 0;
+  background-color: @tm_bg;
+  color: @tm_text;
+  font-family: @tm_font_body;
+  font-size: 14px;
+
+  > .main-container {
+    display: flex;
+    flex: 1 0 auto;
+    margin: 0;
+  }
+
+  > .notice {
+    position: static;
+    padding: 6px 24px 8px;
+    background: @tm_bg_bar;
+    color: @tm_text_faint;
+    font-family: @tm_font_mono;
+    font-size: 11px;
+    text-align: center;
+  }
+}
+body:has(.topmost-start-screen) {
+  background: @tm_bg;
+}
+
+.tm-home {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+
+  a {
+    color: @tm_accent_link;
+  }
+  a:hover {
+    color: #FFC29E;
+  }
+}
+
+.tm-home-grain {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0.09;
+  mix-blend-mode: screen;
+}
+
+.tm-home-main {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: clamp(20px, 4vh, 40px);
+  flex: 1;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: clamp(20px, 4vh, 48px) 24px;
+}
+
+.tm-home-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.tm-home-hero-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+  max-width: 640px;
+}
+
+.tm-home-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.tm-logo {
+  flex: none;
+}
+
+.tm-home-kicker {
+  font-family: @tm_font_mono;
+  font-size: 12px;
+  color: @tm_accent_soft;
   text-transform: uppercase;
-  font-weight: bold;
-  letter-spacing: 1px;
-  padding-bottom: 15px;
-  flex-direction: column-reverse;
-  background-image: url("assets/buttons-homepage/planets.jpg");
+}
+
+.tm-home-title {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  border-radius: 0;
+  filter: none;
+  text-shadow: none;
+  .tm-stencil(clamp(56px, 9vh, 104px));
+  line-height: 0.92;
+  letter-spacing: 0.06em;
+  color: @tm_text;
+
+  .start-screen-title-bottom {
+    color: @tm_accent;
+  }
+}
+
+.tm-home-tagline {
+  margin: 0;
+  max-width: 520px;
+  color: @tm_text_body;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.tm-home .tm-home-new-game {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  min-height: 60px;
+  margin-top: 6px;
+  padding: 0 32px;
+  background: @tm_accent;
+  color: @tm_bg;
+  text-decoration: none;
+  .tm-display(24px);
+  letter-spacing: 0.08em;
+  .tm-chamfer(10px);
 
   &:hover,
-  &:visited,
-  &:active,
-  &:focus {
-    color: #eee;
+  &:focus-visible {
+    background: @tm_accent_soft;
+    color: @tm_bg;
     text-decoration: none;
   }
-
-  &:hover {
-    filter: brightness(120%);
+  &:focus-visible {
+    outline: 2px solid @tm_text;
+    outline-offset: 3px;
   }
 }
 
-.start-screen-header {
-  box-shadow: inset 0 0 20px 20px black;
-  font-family: Prototype, sans-serif;
-  font-size: 16px;
-  width: 369px;
-  line-height: 30px;
-  color: #daab63;
-  display: block;
-  text-shadow:
-    0 0 2px black,
-    0 2px 2px black;
-  letter-spacing: 1px;
-  background: url("assets/buttons-homepage/planets.jpg") no-repeat;
+.tm-home-arrow {
+  font-family: @tm_font_body;
+  font-size: 22px;
 }
 
-.start-screen-title-top {
-  transform: scaleX(2);
-  text-align: center;
-  padding-top: 15px;
+.tm-home-planet {
+  flex: none;
+  width: clamp(280px, 34vw, 480px);
+  height: auto;
 }
 
-.start-screen-title-bottom {
-  transform: scaleX(2);
-  text-align: center;
-  font-size: 30px;
+.tm-home-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
 }
 
-.start-screen-link--new-game {
-  background-position: 0px -90px;
+.tm-home .tm-home-tile {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 72px;
+  box-sizing: border-box;
+  padding: 12px 16px;
+  background: @tm_bg_panel;
+  border: 1px solid @tm_line;
+  color: @tm_text;
+  text-decoration: none;
+
+  &:hover,
+  &:focus-visible {
+    background: @tm_bg_hot;
+    border-color: @tm_accent;
+    color: @tm_text;
+    text-decoration: none;
+
+    .tm-home-tile-icon {
+      color: @tm_accent;
+    }
+  }
+  &:focus-visible {
+    outline: 2px solid @tm_accent;
+    outline-offset: 2px;
+  }
 }
 
-.start-screen-link--how-to-play {
-  background-position: 0px -180px;
+.tm-home-tile-icon {
+  flex: none;
+  color: @tm_accent_soft;
 }
 
-.start-screen-link--cards-list {
-  background-position: 0px -270px;
+.tm-home-tile-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
 }
 
-.start-screen-link--board-game {
-  background-position: 0px -360px;
+.tm-home-tile-name {
+  .tm-display(19px);
+  line-height: 1;
 }
 
-.start-screen-link--about {
-  background-position: 0px -450px;
+.tm-home-tile-desc {
+  font-size: 12px;
+  line-height: 1.4;
+  color: @tm_text_muted;
 }
 
-.start-screen-link--changelog {
-  background-position: 0px -540px;
-}
+// Footer strip: preferences, languages, build info and source link.
+.tm-home-footer {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 20px;
+  padding: 8px 24px;
+  background: @tm_bg_bar;
+  border-top: 2px solid @tm_line;
 
-.start-screen-link--chat {
-  background-position: 0px -630px;
-}
+  // The corner icons are fixed in the bottom-left on other pages; here they sit in the strip.
+  .free-floating-preferences-icon {
+    position: static;
+    display: flex;
+    gap: 6px;
+    padding: 0;
+  }
+  .corner-language-icon.sidebar_item--language,
+  .sidebar_item--settings {
+    position: relative;
+    inset: auto;
+    margin: 0;
+  }
+  .corner-language-icon.sidebar_item--language .preferences_panel.preferences_panel--language-switcher {
+    bottom: 0;
+    left: 100%;
+  }
+  .sidebar_item {
+    background: @tm_bg_raised;
+    border: 1px solid @tm_line_strong;
+    border-radius: 0;
+  }
 
-.start-screen-link--languages {
-  padding-top: 10px;
-  background-position: 0px -720px;
+  .start-screen-link--languages {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .language-switcher {
+    width: auto;
+    margin: 0;
+    justify-content: flex-start;
+    gap: 6px;
+  }
+  .language-icon-for-switcher {
+    zoom: 0.6;
+  }
 }
 
 .start-screen-version-cont {
-  margin-top: 10px;
-  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-family: @tm_font_mono;
+  font-size: 11px;
+  color: @tm_text_muted;
 }
 
-.start-screen-version {
-  margin-top: -5px;
+.source-code-img {
+  width: 18px;
+  height: 18px;
+  vertical-align: middle;
+  filter: invert(1) sepia(0.4);
+}
+
+.tm-home .source-code-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  .tm-display(15px, 700);
+  color: @tm_text_muted;
+  text-decoration: none;
+
+  &:hover {
+    color: @tm_text;
+    text-decoration: none;
+  }
 }
 
 .notice {
@@ -138,139 +318,61 @@
   padding: 16px 24px;
 }
 
-.source-code {
-  text-align: center;
-  margin-top: 1rem;
-}
-
-.source-code-img {
-  vertical-align: middle;
-}
-
-.source-code-text {
-  color: white;
-  font-size: smaller;
-  text-shadow:
-    0 0 2px darkgrey,
-    0 2px 2px darkgrey;
-  letter-spacing: 0.25rem;
-  text-decoration: none;
-}
-
-.source-code-text:focus {
-  text-decoration: none;
-}
-
-.source-code-text:hover {
-  text-decoration: none;
-}
-
-.source-code-text:visited {
-  color: white;
-}
-
 @media only screen and (max-width: 1023px) {
-  .topmost-start-screen {
-    min-height: 100dvh;
-
-    .main-container {
-      margin: 0;
-    }
+  .tm-home-tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-
-  .start-screen {
-    box-sizing: border-box;
-    width: calc(100% - 64px);
-    max-width: 520px;
-  }
-
-  .start-screen-link,
-  .start-screen-header {
-    box-sizing: border-box;
-    width: 100%;
-    background-repeat: no-repeat;
-    background-size: 100% 900%;
-  }
-
-  .start-screen-title-top,
-  .start-screen-title-bottom {
-    transform: none;
-    white-space: nowrap;
-  }
-
-  .start-screen-link--new-game {
-    background-position: 0 12.5%;
-  }
-
-  .start-screen-link--how-to-play {
-    background-position: 0 25%;
-  }
-
-  .start-screen-link--cards-list {
-    background-position: 0 37.5%;
-  }
-
-  .start-screen-link--board-game {
-    background-position: 0 50%;
-  }
-
-  .start-screen-link--about {
-    background-position: 0 62.5%;
-  }
-
-  .start-screen-link--changelog {
-    background-position: 0 75%;
-  }
-
-  .start-screen-link--chat {
-    background-position: 0 87.5%;
-  }
-
-  .start-screen-link--languages {
-    background-position: center 100%;
+  .tm-home-planet {
+    width: clamp(200px, 30vw, 320px);
   }
 }
 
 @media only screen and (max-width: 767px) {
   .topmost-start-screen {
     overflow-x: clip;
-    padding-bottom: max(40px, env(safe-area-inset-bottom));
 
-    .notice {
-      position: static;
-      padding: 16px;
-      text-align: center;
+    > .notice {
+      padding: 8px 16px max(8px, env(safe-area-inset-bottom));
     }
   }
 
-  .start-screen {
-    width: calc(100% - 32px);
-    max-width: 400px;
+  .tm-home-main {
+    justify-content: flex-start;
+    padding: max(20px, env(safe-area-inset-top)) 16px 24px;
   }
 
-  .start-screen-links {
-    padding-top: max(24px, env(safe-area-inset-top));
+  .tm-home-hero {
+    flex-direction: column-reverse;
+    align-items: stretch;
+    gap: 8px;
   }
 
-  .start-screen-link {
-    min-height: 90px;
-    height: 90px;
+  .tm-home-hero-text {
+    max-width: none;
+  }
+
+  .tm-home-title {
+    font-size: clamp(44px, 14vw, 64px);
+  }
+
+  .tm-home-tagline {
+    font-size: 15px;
+  }
+
+  .tm-home .tm-home-new-game {
+    align-self: stretch;
+  }
+
+  .tm-home-planet {
+    align-self: center;
+    width: min(240px, 70vw);
+  }
+
+  .tm-home-tiles {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .tm-home-footer {
     padding: 12px 16px;
-    font-size: 20px;
-  }
-}
-
-@media only screen and (min-width: 768px) and (max-width: 1023px) {
-  .start-screen-link {
-    height: 104px;
-    font-size: 28px;
-  }
-
-  .start-screen-title-top {
-    font-size: 20px;
-  }
-
-  .start-screen-title-bottom {
-    font-size: 38px;
   }
 }
