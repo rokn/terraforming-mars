@@ -1,4 +1,4 @@
-import {mount, shallowMount} from '@vue/test-utils';
+import {flushPromises, mount, shallowMount} from '@vue/test-utils';
 import {globalConfig} from '../getLocalVue';
 import {expect} from 'chai';
 import CreateGameForm from '@/client/components/create/CreateGameForm.vue';
@@ -269,5 +269,52 @@ describe('CreateGameForm', () => {
       penaltyPeriodMinutes: 2,
       penaltyVPPerPeriod: 1,
     });
+  });
+
+  it('applies expansion presets', async () => {
+    const wrapper = shallowMount(CreateGameForm, {...globalConfig});
+    await wrapper.get('[data-test="preset-recommended"]').trigger('click');
+    await flushPromises();
+    expect(wrapper.vm.expansions).deep.eq({...DEFAULT_EXPANSIONS, prelude: true, venus: true, promo: true});
+    expect(wrapper.vm.activePreset).eq('recommended');
+    expect(wrapper.get('[data-test="preset-recommended"]').classes()).contains('tm-chip-button--on');
+
+    await wrapper.get('[data-test="preset-official"]').trigger('click');
+    await flushPromises();
+    expect(wrapper.vm.expansions).deep.eq({...DEFAULT_EXPANSIONS, prelude: true, prelude2: true, venus: true, colonies: true, turmoil: true, promo: true});
+
+    await wrapper.get('[data-test="preset-base"]').trigger('click');
+    await flushPromises();
+    expect(wrapper.vm.expansions).deep.eq(DEFAULT_EXPANSIONS);
+  });
+
+  it('picks a board from the board tiles', async () => {
+    const wrapper = shallowMount(CreateGameForm, {...globalConfig});
+    await wrapper.get('#quickBoard-2').trigger('change');
+    expect(wrapper.vm.boards).deep.eq([BoardName.ELYSIUM]);
+    expect(wrapper.vm.isQuickBoardChosen).is.true;
+    wrapper.vm.boards = [BoardName.ARABIA_TERRA];
+    await wrapper.vm.$nextTick();
+    expect(wrapper.vm.isQuickBoardChosen).is.false;
+    expect(wrapper.find('.tm-board-tile--more.tm-board-tile--on').exists()).is.true;
+  });
+
+  it('shows expansion options only while the expansion is on', async () => {
+    const wrapper = shallowMount(CreateGameForm, {...globalConfig});
+    expect(wrapper.find('#aresExtremeVariantVariant-checkbox').exists()).is.false;
+    await wrapper.get('#ares-checkbox').setValue(true);
+    expect(wrapper.find('[data-module="ares"] #aresExtremeVariantVariant-checkbox').exists()).is.true;
+  });
+
+  it('summarizes the settings in the manifest', async () => {
+    const wrapper = shallowMount(CreateGameForm, {...globalConfig});
+    wrapper.vm.playersCount = 2;
+    wrapper.vm.expansions.venus = true;
+    await wrapper.vm.$nextTick();
+    await wrapper.vm.$nextTick();
+    expect(wrapper.vm.manifestModules).deep.eq(['Corporate Era', 'Venus Next']);
+    expect(wrapper.vm.manifestRules).includes('World Government');
+    expect(wrapper.findAll('[data-test="manifest-hint"]').map((hint) => hint.text()).join()).contains('Venus Next is on');
+    expect(wrapper.find('.tm-manifest .tm-create-submit').exists()).is.true;
   });
 });
