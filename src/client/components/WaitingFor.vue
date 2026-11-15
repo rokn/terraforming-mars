@@ -68,7 +68,7 @@ import {INVALID_REQUEST_ID, INVALID_RUN_ID, AppErrorResponse} from '@/common/app
 import {Color} from '@/common/Color';
 import {gameDocumentTitle} from '../utils/documentTitle';
 import {setFaviconStatus, setFaviconTurnFrame} from '@/client/utils/favicon';
-import {needsColonies} from '@/client/utils/centerView';
+import {needsColonies, needsParties} from '@/client/utils/centerView';
 
 let ui_update_timeout_id: number | undefined;
 let otherPlayersTimer: number | undefined;
@@ -139,8 +139,8 @@ export default defineComponent({
   },
   provide() {
     return {
-      // The operations panel is too narrow for colony tiles; a dialog is not.
-      compactColonies: () => this.actionMenu && !this.modal,
+      // The operations panel is too narrow for colony tiles and party boards; a dialog is not.
+      compactTiles: () => this.actionMenu && !this.modal,
     };
   },
   data(): DataModel {
@@ -389,9 +389,9 @@ export default defineComponent({
     window.removeEventListener('keydown', this.onModalKeydown);
   },
   computed: {
-    /* True when the dialog needs room: for a list of cards or colony tiles. */
+    /* True when the dialog needs room: for a list of cards, colony tiles or parties. */
     wideModal(): boolean {
-      return this.waitingfor?.type === 'card' || needsColonies(this.waitingfor);
+      return this.waitingfor?.type === 'card' || needsColonies(this.waitingfor) || needsParties(this.waitingfor);
     },
     Phase(): typeof Phase {
       return Phase;

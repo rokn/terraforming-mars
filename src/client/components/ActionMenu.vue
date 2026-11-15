@@ -106,7 +106,7 @@ import {getPreferences} from '@/client/utils/PreferencesManager';
 import {quickActions, takeRequestedAction, takeRequestedCard} from '@/client/utils/quickActions';
 import {ActionKind, actionKind} from '@/client/utils/actionKind';
 import {CardName} from '@/common/cards/CardName';
-import {needsColonies} from '@/client/utils/centerView';
+import {needsColonies, needsParties} from '@/client/utils/centerView';
 import {Phase} from '@/common/Phase';
 import {getGlobalParameterMaximums} from '@/common/boards/GlobalParameterMaximums';
 import {MAX_VENUS_SCALE} from '@/common/constants';
@@ -133,6 +133,7 @@ const ICONS: Record<ActionKind, string> = {
   'trade': 'M4 17h13l-3 3M20 7H7l3-3',
   'colony': 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM3 12h18',
   'delegate': 'M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0',
+  'policy': 'M3 21h18M5 18V10M10 18V10M14 18V10M19 18V10M2 10l10-7 10 7z',
   'pass': 'M5 21V4M5 4h12l-3 4 3 4H5',
   'end': 'M5 12h14M13 6l6 6-6 6',
   'undo': 'M9 14L4 9l5-5M4 9h11a5 5 0 0 1 0 10h-3',
@@ -183,14 +184,14 @@ export default defineComponent({
     AppButton,
   },
   inject: {
-    parentCompactColonies: {
-      from: 'compactColonies',
+    parentCompactTiles: {
+      from: 'compactTiles',
       default: () => () => false,
     },
   },
   provide() {
     return {
-      compactColonies: () => !this.detailInModal && (this.parentCompactColonies as () => boolean)(),
+      compactTiles: () => !this.detailInModal && (this.parentCompactTiles as () => boolean)(),
     };
   },
   data() {
@@ -215,8 +216,17 @@ export default defineComponent({
           return {idx, option, kind, hint, muted, wide: kind === 'play'};
         });
     },
+    /* The actions other than ending the turn. Turmoil's policy action sits beside sending a delegate. */
     mainEntries(): Array<Entry> {
-      return this.entries.filter((e) => !END_KINDS.includes(e.kind));
+      const main = this.entries.filter((e) => !END_KINDS.includes(e.kind));
+      const policy = main.find((e) => e.kind === 'policy');
+      const delegate = main.findIndex((e) => e.kind === 'delegate');
+      if (policy === undefined || delegate < 0) {
+        return main;
+      }
+      const rest = main.filter((e) => e !== policy);
+      rest.splice(rest.findIndex((e) => e.kind === 'delegate'), 0, policy);
+      return rest;
     },
     endEntries(): Array<Entry> {
       return this.entries.filter((e) => END_KINDS.includes(e.kind));
@@ -231,11 +241,11 @@ export default defineComponent({
     requestedCard(): CardName | undefined {
       return quickActions.card;
     },
-    /* True when the open action is a list of cards or colony tiles: it shows in a large dialog, where they are readable. */
+    /* True when the open action is a list of cards, colony tiles or parties: it shows in a large dialog, where they are readable. */
     detailInModal(): boolean {
       const option = this.openOption;
       return this.hasHome && this.openIdx !== undefined && option !== undefined &&
-        (option.type === 'card' || option.type === 'projectCard' || needsColonies(option));
+        (option.type === 'card' || option.type === 'projectCard' || needsColonies(option) || needsParties(option));
     },
     requestedAction(): CardName | undefined {
       return quickActions.actionCard;
@@ -285,6 +295,12 @@ export default defineComponent({
       if (option.type === 'or') {
         return {hint: option.options.length + ' ' + this.$t('choices'), muted: false};
       }
+      if (actionKind(option) === 'policy') {
+        return {hint: this.$t('Ruling policy'), muted: false};
+      }
+      if (option.type === 'party') {
+        return {hint: this.delegateHint(), muted: false};
+      }
       return {hint: undefined, muted: false};
     },
     /* The step a World Government option takes, from the current value to the next, e.g. "14% → 16%". */
@@ -315,6 +331,16 @@ export default defineComponent({
         return hint;
       }
       return hint + ' · ' + (player.fleetSize - player.tradesThisGeneration) + ' ' + this.$t('fleets free');
+    },
+    /* The delegates this player has left to send, in reserve and in the lobby. */
+    delegateHint(): string | undefined {
+      const turmoil = this.playerView.game?.turmoil;
+      const color = this.playerView.thisPlayer?.color;
+      if (turmoil === undefined || color === undefined) {
+        return undefined;
+      }
+      const reserve = turmoil.reserve.find((r) => r.color === color)?.number ?? 0;
+      return reserve + ' ' + this.$t('in reserve') + (turmoil.lobby.includes(color) ? ' · 1 ' + this.$t('in the lobby') : '');
     },
     kindOf(option: PlayerInputModel): ActionKind {
       return actionKind(option);

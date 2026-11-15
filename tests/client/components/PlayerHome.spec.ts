@@ -4,7 +4,11 @@ import {globalConfig} from './getLocalVue';
 import PlayerHome from '@/client/components/PlayerHome.vue';
 import CardSortButtons from '@/client/components/CardSortButtons.vue';
 import SortableCards from '@/client/components/SortableCards.vue';
-import {fakeGameModel, fakePlayerViewModel, fakePublicPlayerModel} from './testHelpers';
+import {fakeGameModel, fakePlayerViewModel, fakePublicPlayerModel, fakeTurmoilModel} from './testHelpers';
+import TurmoilView from '@/client/components/turmoil/TurmoilView.vue';
+import PoliticsCard from '@/client/components/turmoil/PoliticsCard.vue';
+import Sidebar from '@/client/components/Sidebar.vue';
+import {PartyName} from '@/common/turmoil/PartyName';
 import {useFakeLocalStorage} from './FakeLocalStorage';
 import {CardName} from '@/common/cards/CardName';
 import raw_settings from '@/genfiles/settings.json';
@@ -211,6 +215,62 @@ describe('PlayerHome', () => {
       const wrapper = mountHome({type: 'space', title: 'Select space for ocean tile', buttonLabel: 'OK', spaces: []});
       await wrapper.vm.$nextTick();
       expect(wrapper.findComponent(ColoniesView).exists()).is.false;
+      wrapper.unmount();
+    });
+  });
+
+  describe('Turmoil', () => {
+    function mountHome(waitingFor?: PlayerInputModel) {
+      const thisPlayer = fakePublicPlayerModel({tableau: [{name: CardName.ECOLINE}]});
+      const playerView = fakePlayerViewModel({
+        thisPlayer,
+        players: [thisPlayer],
+        game: fakeGameModel({turmoil: fakeTurmoilModel()}),
+        waitingFor,
+      });
+      return shallowMount(PlayerHome, {
+        ...globalConfig,
+        parentComponent: {
+          methods: {
+            getVisibilityState: () => false,
+            setVisibilityState: () => {},
+          },
+        },
+        props: {playerView, settings: raw_settings},
+      });
+    }
+
+    it('keeps Turmoil out of the map: a Politics card opens it as a centre view', async () => {
+      const wrapper = mountHome();
+      expect(wrapper.findComponent(Sidebar).exists()).is.false;
+      expect(wrapper.findComponent(CenterViewTabs).props('views')).deep.eq(['mars', 'turmoil']);
+      expect(wrapper.findComponent(TurmoilView).exists()).is.false;
+
+      wrapper.findComponent(PoliticsCard).vm.$emit('open');
+      await wrapper.vm.$nextTick();
+      expect(wrapper.findComponent(TurmoilView).exists()).is.true;
+      expect(loadCenterView()).eq('turmoil');
+      wrapper.unmount();
+    });
+
+    it('opens a party choice in a dialog, and shows the Turmoil view once it is closed', async () => {
+      const wrapper = mountHome({type: 'party', title: 'Select where to send a delegate', buttonLabel: 'Send delegate', parties: [PartyName.REDS]});
+      const waitingFor = wrapper.findComponent(WaitingFor);
+      expect(waitingFor.props('modal')).is.true;
+      expect(wrapper.findComponent(TurmoilView).exists()).is.false;
+
+      waitingFor.vm.$emit('dismiss');
+      await wrapper.vm.$nextTick();
+      expect(wrapper.findComponent(TurmoilView).exists()).is.true;
+      expect(wrapper.find('[data-test=dialog-reopen]').text()).eq('Show parties');
+      wrapper.unmount();
+    });
+
+    it('shows the parties behind a dialog that asks for a delegate', async () => {
+      const wrapper = mountHome({type: 'delegate', title: 'Select a delegate to remove', buttonLabel: 'Remove', players: ['NEUTRAL']});
+      await wrapper.vm.$nextTick();
+      expect(wrapper.findComponent(WaitingFor).props('modal')).is.true;
+      expect(wrapper.findComponent(TurmoilView).exists()).is.true;
       wrapper.unmount();
     });
   });

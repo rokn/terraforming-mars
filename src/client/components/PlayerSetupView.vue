@@ -1,14 +1,15 @@
 <template>
   <div class="tm-main tm-main--setup">
     <section class="tm-setup-side">
-      <div class="tm-panel tm-panel--large tm-setup-map" :class="{'tm-setup-map--colonies': shownView === 'colonies'}">
+      <div class="tm-panel tm-panel--large tm-setup-map" :class="{'tm-setup-map--colonies': shownView === 'colonies', 'tm-setup-map--turmoil': shownView === 'turmoil'}">
         <div class="tm-panel-inner">
           <div class="tm-board-head">
-            <h2 class="tm-board-title" v-i18n>{{ shownView === 'colonies' ? 'Colonies' : boardTitle }}</h2>
+            <h2 class="tm-board-title" v-i18n>{{ viewTitle }}</h2>
             <CenterViewTabs :views="views" :modelValue="shownView" @update:modelValue="chooseView" />
             <span v-if="views.length < 2" class="tm-section-caption"><span v-i18n>Generation</span> {{ game.generation }}</span>
           </div>
           <ColoniesView v-if="shownView === 'colonies'" :colonies="game.colonies" :players="playerView.players" :columns="2" :fleets="false" />
+          <TurmoilView v-else-if="shownView === 'turmoil' && game.turmoil !== undefined" :turmoil="game.turmoil" :players="playerView.players" :agendaStyle="game.gameOptions.politicalAgendasExtension" />
           <FitToBox v-else class="tm-board-fit" zoomable>
             <div class="player_home_block tm-board-block">
               <Board
@@ -20,7 +21,6 @@
                 :altVenusBoard="game.gameOptions.altVenusBoard"
                 :tileView="tileView"
                 @toggleTileView="$emit('toggleTileView')" />
-              <Turmoil v-if="game.turmoil" :turmoil="game.turmoil" />
               <PlanetaryTracks v-if="game.gameOptions.expansions.pathfinders" :tracks="game.pathfinders" :gameOptions="game.gameOptions" />
               <MoonBoard v-if="game.moon !== undefined" :model="game.moon" :tileView="tileView" />
               <DeltaProjectBoard v-if="game.gameOptions.expansions.deltaProject" :players="playerView.players" />
@@ -46,6 +46,8 @@
           </div>
         </div>
       </div>
+
+      <PoliticsCard v-if="game.turmoil !== undefined" :turmoil="game.turmoil" :players="playerView.players" @open="chooseView('turmoil')" />
 
       <MilestonesAwardsPanel v-if="playerView.players.length > 1"
         :milestones="game.milestones"
@@ -126,7 +128,8 @@ import CenterViewTabs from '@/client/components/common/CenterViewTabs.vue';
 import {CenterView, centerViews, loadCenterView, saveCenterView} from '@/client/utils/centerView';
 import WaitingFor from '@/client/components/WaitingFor.vue';
 import PurgeWarning from '@/client/components/common/PurgeWarning.vue';
-import Turmoil from '@/client/components/turmoil/Turmoil.vue';
+import TurmoilView from '@/client/components/turmoil/TurmoilView.vue';
+import PoliticsCard from '@/client/components/turmoil/PoliticsCard.vue';
 import MoonBoard from '@/client/components/moon/MoonBoard.vue';
 import PlanetaryTracks from '@/client/components/pathfinders/PlanetaryTracks.vue';
 import {CardModel} from '@/common/models/CardModel';
@@ -182,6 +185,16 @@ export default defineComponent({
     boardTitle(): string {
       return this.game.gameOptions.boardName.replaceAll('_', ' ');
     },
+    viewTitle(): string {
+      switch (this.shownView) {
+      case 'colonies':
+        return 'Colonies';
+      case 'turmoil':
+        return 'Turmoil';
+      default:
+        return this.boardTitle;
+      }
+    },
     dealtCards(): Array<CardModel> {
       const v = this.playerView;
       return [...v.dealtCorporationCards, ...v.dealtPreludeCards, ...v.dealtCeoCards, ...v.dealtProjectCards];
@@ -198,7 +211,8 @@ export default defineComponent({
     CenterViewTabs,
     WaitingFor,
     PurgeWarning,
-    Turmoil,
+    TurmoilView,
+    PoliticsCard,
     PlanetaryTracks,
     MoonBoard,
   },

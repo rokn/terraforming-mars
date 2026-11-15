@@ -3875,10 +3875,520 @@ body:has(#game-end.tm-end--app) {
 .tm-corp-foot:has(.tm-xstats) {
   gap: 7px;
 
+  // With Colonies and Turmoil together, the counters take a line of their own.
+  &:has(.tm-xstat:nth-child(4)) {
+    flex-wrap: wrap;
+    row-gap: 3px;
+
+    .tm-xstats {
+      order: 1;
+      flex-basis: 100%;
+      gap: 12px;
+    }
+  }
+
   .tm-corp-cards-icon {
     display: inline;
   }
   .tm-corp-cards-label {
     display: none;
   }
+}
+
+// ---------------------------------------------------------------------------
+// Turmoil: the centre view, the Politics card, party and event tiles, and the choices.
+// Party colours come from `utils/turmoil.ts` as `--tm-party` (band) and `--tm-party-ink` (text on it).
+// ---------------------------------------------------------------------------
+
+.tm-party-chip {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  padding: 1px 7px;
+  background: var(--tm-party);
+  color: var(--tm-party-ink);
+  .tm-display(13px, 800);
+  letter-spacing: 0.05em;
+  line-height: 1.25;
+  white-space: nowrap;
+  .tm-chamfer(5px);
+}
+.tm-delegate-icon {
+  flex: none;
+}
+
+// The view: the politics line, then the events and parties fitted to the rest of the panel.
+.tm-turmoil-view {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.tm-turmoil-fit {
+  flex: 1 1 0;
+  min-height: 0;
+
+  // Over the short headings, where it hides nothing.
+  .fit-to-box-zoom {
+    top: 0;
+    bottom: auto;
+  }
+}
+@media (max-height: 760px) {
+  .tm-turmoil-fit .fit-to-box-zoom {
+    zoom: 0.8;
+  }
+}
+.tm-politics-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 16px;
+  padding: 5px 10px;
+  background: @tm_bg_deep;
+  border: 1px solid @tm_line;
+  font-family: @tm_font_mono;
+  font-size: 12px;
+  color: @tm_text_body;
+}
+.tm-politics-item,
+.tm-politics-player {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.tm-politics-key {
+  .tm-caption(10px);
+}
+.tm-politics-name {
+  .tm-display(14px, 700);
+  letter-spacing: 0.04em;
+}
+.tm-politics-players {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin-left: auto;
+}
+.tm-politics-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-weight: 600;
+  color: @tm_text;
+
+  svg {
+    color: @tm_gold;
+  }
+}
+.tm-politics-lobby,
+.tm-xstat-extra {
+  margin-left: 1px;
+  color: @tm_accent_soft;
+}
+.tm-politics-player--neutral {
+  opacity: 0.75;
+}
+
+// The board, laid out at its natural size and scaled by FitToBox.
+.tm-turmoil-board {
+  width: 900px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 4px;
+}
+.tm-turmoil-heading {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin: 0 0 8px;
+  .tm-stencil(20px);
+  color: @tm_text;
+
+  .tm-section-caption {
+    letter-spacing: 0;
+    text-transform: none;
+    font-size: 12px;
+  }
+}
+.tm-turmoil-events {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+
+  > .tm-event {
+    flex: 1 1 0;
+  }
+}
+.tm-turmoil-arrow {
+  display: flex;
+  align-items: center;
+  color: @tm_text_faint;
+}
+.tm-turmoil-parties {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+}
+
+// A party, as a column: band with its name, ruling and dominant markers, leader and delegates, bonus and policy.
+.tm-party {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 0;
+  background: @tm_bg_tile;
+  border: 1px solid @tm_line_strong;
+  border-top: 0;
+  outline: 3px solid transparent;
+  outline-offset: 2px;
+  color: @tm_text_body;
+  font: inherit;
+  text-align: left;
+}
+.tm-party-band {
+  display: flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 3px 8px;
+  background: var(--tm-party);
+  color: var(--tm-party-ink);
+}
+.tm-party-name {
+  .tm-display(18px, 800);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.tm-party-flags {
+  display: flex;
+  gap: 3px;
+  min-height: 19px;
+  padding: 3px 6px 0;
+}
+.tm-party-flag {
+  padding: 1px 5px;
+  background: @tm_text;
+  color: @tm_bg;
+  .tm-display(11px, 800);
+  letter-spacing: 0.08em;
+}
+.tm-party-flag--ruling {
+  background: @tm_gold;
+  color: @tm_gold_ink;
+}
+.tm-party--ruling {
+  border-color: @tm_gold;
+  box-shadow: 0 0 0 1px @tm_gold;
+}
+.tm-party-seats {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-height: 74px;
+  padding: 5px 8px 7px;
+  border-bottom: 1px solid @tm_line;
+}
+.tm-party-leader {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.tm-party-leader-empty {
+  width: 26px;
+  height: 26px;
+  border: 1px dashed @tm_line_button;
+  border-radius: 50%;
+}
+.tm-party-seat-label {
+  .tm-caption(9px);
+}
+.tm-party-delegates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1px;
+  min-width: 0;
+}
+.tm-party-empty {
+  font-size: 11px;
+  color: @tm_text_faint;
+}
+.tm-party-count {
+  margin-left: auto;
+  min-width: 24px;
+  padding: 1px 4px;
+  border: 1px solid @tm_line_button;
+  .tm-display(16px, 800);
+  color: @tm_text;
+  text-align: center;
+}
+.tm-party-agenda {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px 8px 8px;
+  font-size: 13px;
+  line-height: 1.3;
+}
+.tm-party-agenda-row {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.tm-party-agenda-key {
+  .tm-caption(9.5px);
+}
+.tm-party-agenda-row--on {
+  .tm-party-agenda-key {
+    color: @tm_gold;
+  }
+  .tm-party-agenda-text {
+    color: @tm_text;
+    font-weight: 600;
+  }
+}
+.tm-party--selectable {
+  cursor: pointer;
+  border-color: @tm_accent_soft;
+
+  &:hover,
+  &:focus-visible {
+    outline-color: @tm_accent_soft;
+  }
+}
+.tm-party--selected,
+.tm-party--selected:hover {
+  border-color: @tm_accent;
+  outline-color: @tm_accent;
+  box-shadow: 0 0 24px fade(@tm_accent, 45%);
+}
+.tm-party--dimmed {
+  opacity: 0.4;
+}
+.tm-party-check {
+  position: absolute;
+  top: 4px;
+  right: 5px;
+  display: inline-flex;
+  padding: 4px;
+  background: @tm_accent;
+  color: @tm_bg;
+}
+
+// A global event: stage, name, the parties it sends neutral delegates to, and its effect.
+.tm-event {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+  padding: 8px 10px 10px;
+  background: @tm_bg_tile;
+  border: 1px solid @tm_line_strong;
+  outline: 3px solid transparent;
+  outline-offset: 2px;
+  color: @tm_text_body;
+  font: inherit;
+  text-align: left;
+}
+.tm-event--current {
+  border-color: @tm_accent;
+  box-shadow: inset 0 3px 0 @tm_accent;
+}
+.tm-event-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.tm-event-stage {
+  .tm-display(13px, 800);
+  letter-spacing: 0.1em;
+  color: @tm_text_muted;
+}
+.tm-event--current .tm-event-stage {
+  color: @tm_accent;
+}
+.tm-event-when {
+  .tm-caption(10px);
+  text-transform: none;
+  color: @tm_text_faint;
+}
+.tm-event-name {
+  .tm-display(21px, 800);
+  color: @tm_text;
+  line-height: 1.05;
+}
+.tm-event-parties {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px 10px;
+}
+.tm-event-party {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.tm-event-party-key {
+  .tm-caption(10px);
+}
+// The effect as drawn on the card, on the card's light stock.
+.tm-event-effect.card-container {
+  display: flex;
+  justify-content: center;
+  width: auto;
+  height: auto;
+  margin: 2px 0 0;
+  padding: 4px 6px;
+  background: #E9DEC9;
+  border: 0;
+  box-shadow: none;
+  border-radius: 2px;
+
+  .card-content.tm-event-render {
+    width: auto;
+    height: auto;
+    min-height: 0;
+    padding: 0;
+    background: none;
+    overflow: visible;
+    zoom: 0.72;
+  }
+}
+.tm-event-text {
+  font-size: 13px;
+  line-height: 1.35;
+  color: @tm_text_body;
+}
+.tm-event--selectable {
+  cursor: pointer;
+  border-color: @tm_accent_soft;
+
+  &:hover,
+  &:focus-visible {
+    outline-color: @tm_accent_soft;
+  }
+}
+.tm-event--selected,
+.tm-event--selected:hover {
+  border-color: @tm_accent;
+  outline-color: @tm_accent;
+}
+.tm-event-choices {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+// The Politics card in the left column.
+.tm-politics-card {
+  display: block;
+  width: 100%;
+  border: 0;
+  color: @tm_text;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+
+  > .tm-panel-inner {
+    gap: 5px;
+    padding: 9px 12px 10px;
+  }
+  &:hover,
+  &:focus-visible {
+    background: @tm_line_button;
+  }
+  .tm-section-title {
+    margin: 0;
+    align-items: center;
+  }
+}
+.tm-politics-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 12px;
+}
+.tm-politics-policy {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-width: 0;
+  font-size: 12px;
+  line-height: 1.25;
+  color: @tm_text_body;
+}
+.tm-politics-key--push {
+  margin-left: auto;
+}
+.tm-politics-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+.tm-politics-event {
+  color: @tm_accent_soft;
+}
+
+// Header: the ruling party, where there is room.
+.tm-header-ruling {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+}
+.tm-header-ruling-label {
+  .tm-caption();
+}
+@media (max-width: 1400px) {
+  .tm-app .tm-header .tm-header-ruling {
+    display: none;
+  }
+}
+
+// Choosing a party in a dialog: the six parties large, the offered ones clickable.
+.tm-party-choices {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(140px, 180px));
+  gap: 10px;
+  padding: 4px;
+  margin-bottom: 12px;
+}
+@media (max-height: 820px) {
+  .tm-party-choices .tm-party-agenda {
+    display: none;
+  }
+}
+// Choosing a party in the narrow operations panel: names, with the parties in the Turmoil view.
+.tm-party-picks {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 10px;
+}
+.tm-party-pick {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.tm-delegate-picks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  margin: 4px 0 10px;
+}
+.tm-delegate-pick {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+// Setup: the Turmoil view needs more height than the map panel's minimum.
+.tm-setup-side > .tm-setup-map.tm-setup-map--turmoil {
+  min-height: 560px;
 }

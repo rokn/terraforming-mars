@@ -16,7 +16,7 @@
     id="shortkey-board"
   />
 
-  <template v-if="game.turmoil">
+  <template v-if="game.turmoil && showTurmoil">
     <a class="hotkey-target"></a>
     <Turmoil :turmoil="game.turmoil" />
   </template>
@@ -73,6 +73,11 @@ export default defineComponent({
     },
     /* True when milestones and awards render below the board. */
     showMilestonesAndAwards: {
+      type: Boolean,
+      default: true,
+    },
+    /* True when the Turmoil board renders below the board, in Turmoil games. */
+    showTurmoil: {
       type: Boolean,
       default: true,
     },

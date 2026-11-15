@@ -2,7 +2,7 @@ import {mount} from '@vue/test-utils';
 import {expect} from 'chai';
 import {globalConfig} from '../getLocalVue';
 import PlayerExpansionStats from '@/client/components/overview/PlayerExpansionStats.vue';
-import {fakeGameModel, fakePublicPlayerModel} from '../testHelpers';
+import {fakeGameModel, fakePublicPlayerModel, fakeTurmoilModel} from '../testHelpers';
 import {ColonyName} from '@/common/colonies/ColonyName';
 import {simpleColonyModel} from '@/common/models/ColonyModel';
 
@@ -19,5 +19,17 @@ describe('PlayerExpansionStats', () => {
     const wrapper = mount(PlayerExpansionStats, {...globalConfig, props: {player, game}});
     expect(wrapper.find('[data-test=stat-fleets]').text()).eq('1/2');
     expect(wrapper.find('[data-test=stat-colonies]').text()).eq('3');
+  });
+});
+
+describe('PlayerExpansionStats in Turmoil games', () => {
+  it('shows influence and delegates in reserve, plus the lobby delegate', () => {
+    const game = fakeGameModel({turmoil: fakeTurmoilModel()});
+    const mira = mount(PlayerExpansionStats, {...globalConfig, props: {player: fakePublicPlayerModel({color: 'red', influence: 2}), game}});
+    expect(mira.find('[data-test=stat-influence]').text()).eq('2');
+    expect(mira.find('[data-test=stat-delegates]').text()).eq('4+1');
+    expect(mira.find('[data-test=stat-fleets]').exists()).is.false;
+    const ada = mount(PlayerExpansionStats, {...globalConfig, props: {player: fakePublicPlayerModel({color: 'blue'}), game}});
+    expect(ada.find('[data-test=stat-delegates]').text()).eq('3');
   });
 });

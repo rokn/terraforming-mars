@@ -17,7 +17,7 @@
         v-i18n="[$t(card.name), card.additionalProjectCosts.thinkTankResources, 'data', $t(CardName.THINK_TANK)]">
         Playing ${0} consumes ${1} ${2} from ${3}
       </div>
-      <div v-if="card.additionalProjectCosts.redsCost" class="card-warning" v-i18n="[$t(card.name), card.additionalProjectCosts.redsCost, $t('Reds')]">
+      <div v-if="card.additionalProjectCosts.redsCost" class="card-warning card-warning--reds" v-i18n="[$t(card.name), card.additionalProjectCosts.redsCost, $t('Reds')]">
         Playing ${0} will cost ${1} M€ more because ${2} are in power
       </div>
     </template>

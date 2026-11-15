@@ -43,7 +43,7 @@ type DataModel = {
 
 /**
  * Asks for one colony tile. Shows the tiles large and clickable, except where an ancestor provides
- * `compactColonies` returning true (the narrow operations panel): there it lists the names and shares
+ * `compactTiles` returning true (the narrow operations panel): there it lists the names and shares
  * the choice through `colonyPick`, so the tiles can be clicked in the Colonies view instead.
  */
 export default defineComponent({
@@ -69,7 +69,7 @@ export default defineComponent({
     },
   },
   inject: {
-    compactColonies: {
+    compactTiles: {
       default: () => () => false,
     },
   },
@@ -92,7 +92,7 @@ export default defineComponent({
       return this.playerinput.buttonLabel === 'Build';
     },
     compact(): boolean {
-      return (this.compactColonies as () => boolean)();
+      return (this.compactTiles as () => boolean)();
     },
     pickedElsewhere(): ColonyName | undefined {
       return colonyPick.selected;

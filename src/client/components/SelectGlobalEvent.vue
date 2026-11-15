@@ -1,12 +1,15 @@
 <template>
   <div class="wf-component wf-component--select-global-event">
     <div v-if="showtitle === true" class="nofloat wf-component-title">{{ $t(playerinput.title) }}</div>
-    <label v-for="globalEventName in playerinput.globalEventNames" :key="globalEventName" class="cardBox">
-      <input type="radio" v-model="selected" :value="globalEventName">
-      <GlobalEvent :globalEventName="globalEventName" type="distant" />
-    </label>
+    <div class="tm-event-choices">
+      <EventTile v-for="globalEventName in playerinput.globalEventNames" :key="globalEventName"
+        :name="globalEventName"
+        selectable
+        :selected="selected === globalEventName"
+        @select="selected = $event" />
+    </div>
     <div v-if="showsave === true" class="nofloat">
-      <AppButton :disabled="selected === undefined" type="submit" @click="saveData" title="OK" />
+      <AppButton :disabled="selected === undefined" type="submit" @click="saveData" title="OK" data-primary />
     </div>
   </div>
 </template>
@@ -16,7 +19,7 @@
 import {defineComponent} from 'vue';
 import AppButton from '@/client/components/common/AppButton.vue';
 import {PlayerViewModel} from '@/common/models/PlayerModel';
-import GlobalEvent from '@/client/components/turmoil/GlobalEvent.vue';
+import EventTile from '@/client/components/turmoil/EventTile.vue';
 import {SelectGlobalEventModel} from '@/common/models/PlayerInputModel';
 import {SelectGlobalEventResponse} from '@/common/inputs/InputResponse';
 import {GlobalEventName} from '@/common/turmoil/globalEvents/GlobalEventName';
@@ -55,7 +58,7 @@ export default defineComponent({
     };
   },
   components: {
-    GlobalEvent,
+    EventTile,
     AppButton,
   },
   methods: {

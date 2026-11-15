@@ -3,13 +3,15 @@ import {PlayerInputModel} from '@/common/models/PlayerInputModel';
 /** What a top-level action does, which picks its icon and where it sits in the action menu. */
 export type ActionKind =
   'play' | 'standard' | 'card-action' | 'milestone' | 'award' | 'plants' | 'heat' |
-  'sell' | 'trade' | 'colony' | 'delegate' | 'pass' | 'end' | 'undo' | 'other';
+  'sell' | 'trade' | 'colony' | 'delegate' | 'policy' | 'pass' | 'end' | 'undo' | 'other';
 
 function titleText(option: PlayerInputModel): string {
   return typeof option.title === 'string' ? option.title : option.title.message;
 }
 
 const RULES: ReadonlyArray<[string, ActionKind]> = [
+  // The ruling party's policy action, e.g. "${0} (Turmoil ${1})".
+  ['(turmoil ', 'policy'],
   ['standard project', 'standard'],
   ['action from a played card', 'card-action'],
   ['milestone', 'milestone'],

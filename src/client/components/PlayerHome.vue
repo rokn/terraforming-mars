@@ -25,6 +25,7 @@
         <aside class="tm-left">
           <a class="hotkey-target"></a>
           <CorporationsPanel :playerView="playerView" id="shortkey-playersoverview" @select="showPlayer" />
+          <PoliticsCard v-if="game.turmoil !== undefined" :turmoil="game.turmoil" :players="playerView.players" @open="chooseView('turmoil')" />
           <MilestonesAwardsPanel v-if="playerView.players.length > 1"
             :milestones="game.milestones"
             :awards="game.awards"
@@ -35,10 +36,13 @@
         <main class="tm-center tm-panel tm-panel--large">
           <div class="tm-panel-inner">
             <div class="tm-board-head">
-              <h2 class="tm-board-title" v-i18n>{{ shownView === 'colonies' ? 'Colonies' : boardTitle }}</h2>
+              <h2 class="tm-board-title" v-i18n>{{ viewTitle }}</h2>
               <CenterViewTabs :views="views" :modelValue="shownView" @update:modelValue="chooseView" />
               <span v-if="shownView === 'colonies'" class="tm-section-caption" data-test="board-stats">
                 {{ game.colonies.length }} <span v-i18n>tiles</span> · {{ builtColonyCount }} <span v-i18n>colonies built</span>
+              </span>
+              <span v-else-if="shownView === 'turmoil'" class="tm-section-caption" data-test="board-stats">
+                {{ seatedDelegateCount }} <span v-i18n>delegates in parties</span>
               </span>
               <span v-else class="tm-section-caption" data-test="board-stats">
                 {{ marsSpaceCount }} <span v-i18n>areas</span> · {{ placedTileCount }} <span v-i18n>tiles placed</span>
@@ -58,6 +62,13 @@
               :selected="colonyPick.selected"
               :fadeMarker="colonyPick.build"
               @select="colonyPick.selected = $event" />
+            <TurmoilView v-if="shownView === 'turmoil' && game.turmoil !== undefined"
+              :turmoil="game.turmoil"
+              :players="playerView.players"
+              :agendaStyle="game.gameOptions.politicalAgendasExtension"
+              :selectable="partyPick.offered"
+              :selected="partyPick.selected"
+              @select="partyPick.selected = $event" />
             <FitToBox v-show="shownView === 'mars'" class="tm-board-fit" zoomable>
               <div class="player_home_block tm-board-block">
                 <GameBoardView
@@ -66,6 +77,7 @@
                   :tileView="tileView"
                   :players="playerView.players"
                   :showMilestonesAndAwards="false"
+                  :showTurmoil="false"
                   @toggleTileView="cycleTileView()"
                 />
               </div>
@@ -240,6 +252,8 @@ import Card from '@/client/components/card/Card.vue';
 import WaitingFor from '@/client/components/WaitingFor.vue';
 import Sidebar from '@/client/components/Sidebar.vue';
 import ColoniesView from '@/client/components/colonies/ColoniesView.vue';
+import TurmoilView from '@/client/components/turmoil/TurmoilView.vue';
+import PoliticsCard from '@/client/components/turmoil/PoliticsCard.vue';
 import CenterViewTabs from '@/client/components/common/CenterViewTabs.vue';
 import PlayerExpansionStats from '@/client/components/overview/PlayerExpansionStats.vue';
 import LogPanel from '@/client/components/logpanel/LogPanel.vue';
@@ -263,7 +277,7 @@ import SidePanel from '@/client/components/common/SidePanel.vue';
 import PlayerCube from '@/client/components/common/PlayerCube.vue';
 import {actionableCards, playableCards, quickActions, requestAction, requestPlay} from '@/client/utils/quickActions';
 import {isActionMenu, isPreludeChoice} from '@/client/utils/actionKind';
-import {CenterView, centerViewForKey, centerViews, colonyPick, loadCenterView, needsColonies, saveCenterView, viewForInput} from '@/client/utils/centerView';
+import {CenterView, centerViewForKey, centerViews, colonyPick, loadCenterView, needsColonies, needsParties, needsTurmoil, partyPick, saveCenterView, viewForInput} from '@/client/utils/centerView';
 import {SpaceId} from '@/common/Types';
 import {translateTextWithParams} from '@/client/directives/i18n';
 import {KeyboardNavigation} from '@/client/components/KeyboardNavigation';
@@ -293,7 +307,7 @@ type PlayerHomeModel = {
   panel: Panel | undefined;
   /** Current sort order of the hand, or undefined before the player picks one and after they reorder by hand. */
   handSortOrder: SortOrder | undefined;
-  /** True when the player closed the dialog of the prelude phase or of a colony choice to look around. */
+  /** True when the player closed the dialog of the prelude phase, or of a colony or Turmoil choice, to look around. */
   dialogDismissed: boolean;
   /** The view the player last chose for the centre stage, or that a choice switched it to. */
   centerView: CenterView;
@@ -409,12 +423,26 @@ export default defineComponent({
       const waitingFor = this.playerView.waitingFor;
       return waitingFor !== undefined && !waitingFor.optional && !isActionMenu(waitingFor) && needsColonies(waitingFor);
     },
+    /* True while the player is asked about Turmoil (a party, a delegate or a global event), outside the action menu. */
+    choosingTurmoil(): boolean {
+      const waitingFor = this.playerView.waitingFor;
+      return waitingFor !== undefined && !waitingFor.optional && !isActionMenu(waitingFor) && needsTurmoil(waitingFor);
+    },
     /* The label of the button that reopens a closed choice dialog, when there is one. */
     reopenLabel(): string | undefined {
       if (!this.dialogDismissed) {
         return undefined;
       }
-      return this.choosingPrelude ? 'Show preludes' : this.choosingColony ? 'Show colony tiles' : undefined;
+      if (this.choosingPrelude) {
+        return 'Show preludes';
+      }
+      if (this.choosingColony) {
+        return 'Show colony tiles';
+      }
+      if (this.choosingTurmoil) {
+        return needsParties(this.playerView.waitingFor) ? 'Show parties' : 'Show the choice';
+      }
+      return undefined;
     },
     /* The centre views this game has. */
     views(): Array<CenterView> {
@@ -425,6 +453,22 @@ export default defineComponent({
     },
     colonyPick(): typeof colonyPick {
       return colonyPick;
+    },
+    partyPick(): typeof partyPick {
+      return partyPick;
+    },
+    viewTitle(): string {
+      switch (this.shownView) {
+      case 'colonies':
+        return 'Colonies';
+      case 'turmoil':
+        return 'Turmoil';
+      default:
+        return this.boardTitle;
+      }
+    },
+    seatedDelegateCount(): number {
+      return this.game.turmoil?.parties.reduce((sum, party) => sum + party.delegates.reduce((n, d) => n + d.number, 0), 0) ?? 0;
     },
     builtColonyCount(): number {
       return this.game.colonies.reduce((sum, colony) => sum + colony.colonies.length, 0);
@@ -450,9 +494,9 @@ export default defineComponent({
       const waitingFor = this.playerView.waitingFor;
       // In the prelude phase, choosing a prelude and what it asks for next show as a dialog too.
       const preludes = this.game.phase === Phase.PRELUDES && !this.dialogDismissed;
-      // Colony tiles do not fit the operations panel.
-      const colonies = this.choosingColony && !this.dialogDismissed;
-      return (quickActions.followUp || preludes || colonies) && waitingFor !== undefined && !waitingFor.optional && !this.isResearching &&
+      // Colony tiles and parties do not fit the operations panel.
+      const tiles = (this.choosingColony || this.choosingTurmoil) && !this.dialogDismissed;
+      return (quickActions.followUp || preludes || tiles) && waitingFor !== undefined && !waitingFor.optional && !this.isResearching &&
         !isActionMenu(waitingFor) && waitingFor.type !== 'space';
     },
     /* True while the action menu asks the player to pick a card from their hand. */
@@ -478,9 +522,9 @@ export default defineComponent({
     isResearching(): boolean {
       return this.game.phase === Phase.RESEARCH || this.game.phase === Phase.DRAFTING;
     },
-    /* True when the game shows information that only the sidebar displays (Turmoil, The Moon). */
+    /* True when the game shows information that only the sidebar displays (The Moon). */
     showSidebar(): boolean {
-      return this.game.turmoil !== undefined || this.game.moon !== undefined;
+      return this.game.moon !== undefined;
     },
     boardTitle(): string {
       return this.game.gameOptions.boardName.replaceAll('_', ' ');
@@ -563,6 +607,8 @@ export default defineComponent({
     WaitingFor,
     Sidebar,
     ColoniesView,
+    TurmoilView,
+    PoliticsCard,
     CenterViewTabs,
     PlayerExpansionStats,
     LogPanel,
@@ -623,7 +669,12 @@ export default defineComponent({
         return;
       }
       const view = viewForInput(waitingFor);
-      if (view === undefined || !this.views.includes(view) || (view !== 'mars' && this.followUpModal)) {
+      if (view === undefined || !this.views.includes(view)) {
+        return;
+      }
+      // A dialog shows colony tiles and parties itself; choosing a delegate or an event, the parties stay behind it.
+      const shownInDialog = view === 'colonies' || (view === 'turmoil' && needsParties(waitingFor));
+      if (this.followUpModal && shownInDialog) {
         return;
       }
       this.centerView = view;

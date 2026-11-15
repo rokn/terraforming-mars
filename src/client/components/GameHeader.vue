@@ -34,6 +34,10 @@
         <span class="tm-header-progress-label"><span v-i18n>Terraformed</span><strong data-test="terraformed">{{ terraformed }}%</strong></span>
         <span class="tm-header-progress-track"><span class="tm-header-progress-fill" :style="{width: terraformed + '%'}"></span></span>
       </div>
+      <span v-if="game.turmoil?.ruling !== undefined" class="tm-header-ruling" :title="$t('Ruling party')" data-test="ruling">
+        <span class="tm-header-ruling-label" v-i18n>Ruling</span>
+        <PartyChip :party="game.turmoil.ruling" />
+      </span>
     </div>
 
     <div class="tm-header-tools">
@@ -67,6 +71,7 @@ import PlayerTimer from '@/client/components/overview/PlayerTimer.vue';
 import LanguageIcon from '@/client/components/LanguageIcon.vue';
 import PreferencesIcon from '@/client/components/PreferencesIcon.vue';
 import TerraformedBanner from '@/client/components/TerraformedBanner.vue';
+import PartyChip from '@/client/components/turmoil/PartyChip.vue';
 import {PhaseStep, phaseStep, terraformedPercent} from '@/client/utils/gameTheme';
 
 const STEPS: ReadonlyArray<{id: PhaseStep, label: string}> = [
@@ -89,6 +94,7 @@ export default defineComponent({
     LanguageIcon,
     PreferencesIcon,
     TerraformedBanner,
+    PartyChip,
   },
   computed: {
     game(): GameModel {

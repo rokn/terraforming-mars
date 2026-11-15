@@ -10,6 +10,7 @@
     B - Your tableau<br>
     M - Show Mars in the centre<br>
     C - Show the colonies in the centre<br>
+    T - Show Turmoil in the centre<br>
     <template v-if="preferences().experimental_ui">
       <br>
       1-9 - Scroll through the player board.

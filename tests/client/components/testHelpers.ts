@@ -11,7 +11,9 @@ import {Resource} from '@/common/Resource';
 import {Tag} from '@/common/cards/Tag';
 import {Protection} from '@/common/models/PlayerModel';
 import {DEFAULT_EXPANSIONS} from '@/common/cards/GameModule';
-import {PoliticalAgendasModel} from '@/common/models/TurmoilModel';
+import {PoliticalAgendasModel, TurmoilModel} from '@/common/models/TurmoilModel';
+import {PartyName} from '@/common/turmoil/PartyName';
+import {GlobalEventName} from '@/common/turmoil/globalEvents/GlobalEventName';
 import {SpectatorModel} from '@/common/models/SpectatorModel';
 
 function emptyProtection(): Record<Resource, Protection> {
@@ -261,5 +263,30 @@ export function fakePoliticalAgendasModel(): PoliticalAgendasModel {
       bonusId: 'kb01',
       policyId: 'kp01',
     },
+  };
+}
+
+/** A Turmoil game mid-way: Scientists rule, Mars First dominates, Ada (blue) chairs and Mira (red) is in the lobby. */
+export function fakeTurmoilModel(overrides?: Partial<TurmoilModel>): TurmoilModel {
+  return {
+    dominant: PartyName.MARS,
+    ruling: PartyName.SCIENTISTS,
+    chairman: 'blue',
+    parties: [
+      {name: PartyName.MARS, partyLeader: 'green', delegates: [{color: 'green', number: 2}, {color: 'blue', number: 1}, {color: 'neutral', number: 1}]},
+      {name: PartyName.SCIENTISTS, partyLeader: undefined, delegates: []},
+      {name: PartyName.UNITY, partyLeader: 'red', delegates: [{color: 'red', number: 1}]},
+      {name: PartyName.GREENS, partyLeader: undefined, delegates: []},
+      {name: PartyName.REDS, partyLeader: undefined, delegates: []},
+      {name: PartyName.KELVINISTS, partyLeader: 'neutral', delegates: [{color: 'neutral', number: 1}]},
+    ],
+    lobby: ['red'],
+    reserve: [{color: 'blue', number: 3}, {color: 'red', number: 4}, {color: 'neutral', number: 10}],
+    distant: GlobalEventName.PANDEMIC,
+    coming: GlobalEventName.DIVERSITY,
+    current: GlobalEventName.SOLAR_FLARE,
+    politicalAgendas: fakePoliticalAgendasModel(),
+    policyActionUsers: [],
+    ...overrides,
   };
 }

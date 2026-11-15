@@ -7,4 +7,5 @@ export const KeyboardNavigation = {
   // Centre stage views in the game.
   MARS_VIEW: 'KeyM',
   COLONIES_VIEW: 'KeyC',
+  TURMOIL_VIEW: 'KeyT',
 } as const;

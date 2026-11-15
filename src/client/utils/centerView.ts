@@ -2,11 +2,12 @@ import {reactive} from 'vue';
 import {GameModel} from '@/common/models/GameModel';
 import {PlayerInputModel} from '@/common/models/PlayerInputModel';
 import {ColonyName} from '@/common/colonies/ColonyName';
+import {PartyName} from '@/common/turmoil/PartyName';
 import {KeyboardNavigation} from '@/client/components/KeyboardNavigation';
 import {safeLocalStorage} from '@/client/utils/SafeLocalStorage';
 
 /** The views the centre stage of the game can show, in tab order. */
-export const CENTER_VIEWS = ['mars', 'colonies'] as const;
+export const CENTER_VIEWS = ['mars', 'colonies', 'turmoil'] as const;
 export type CenterView = typeof CENTER_VIEWS[number];
 
 /** A centre view: its tab label, keyboard shortcut (a `KeyboardEvent.code`) and when a game has it. */
@@ -19,6 +20,7 @@ type CenterViewSpec = {
 export const CENTER_VIEW_SPECS: Record<CenterView, CenterViewSpec> = {
   mars: {label: 'Mars', key: KeyboardNavigation.MARS_VIEW, inGame: () => true},
   colonies: {label: 'Colonies', key: KeyboardNavigation.COLONIES_VIEW, inGame: (game) => game.colonies.length > 0},
+  turmoil: {label: 'Turmoil', key: KeyboardNavigation.TURMOIL_VIEW, inGame: (game) => game.turmoil !== undefined},
 };
 
 const STORAGE_KEY = 'tm_center_view';
@@ -61,12 +63,37 @@ export function needsColonies(input: PlayerInputModel | undefined): boolean {
   return (input.type === 'or' || input.type === 'and') && input.options.some(needsColonies);
 }
 
+/** True when `input`, or a choice inside it, asks the player to pick a party. */
+export function needsParties(input: PlayerInputModel | undefined): boolean {
+  if (input === undefined) {
+    return false;
+  }
+  if (input.type === 'party') {
+    return true;
+  }
+  return (input.type === 'or' || input.type === 'and') && input.options.some(needsParties);
+}
+
+/** True when `input`, or a choice inside it, is about Turmoil: a party, a delegate or a global event. */
+export function needsTurmoil(input: PlayerInputModel | undefined): boolean {
+  if (input === undefined) {
+    return false;
+  }
+  if (input.type === 'party' || input.type === 'delegate' || input.type === 'globalEvent') {
+    return true;
+  }
+  return (input.type === 'or' || input.type === 'and') && input.options.some(needsTurmoil);
+}
+
 /** The centre view the player needs to answer `input`, if any. */
 export function viewForInput(input: PlayerInputModel | undefined): CenterView | undefined {
   if (input?.type === 'space') {
     return 'mars';
   }
-  return needsColonies(input) ? 'colonies' : undefined;
+  if (needsColonies(input)) {
+    return 'colonies';
+  }
+  return needsTurmoil(input) ? 'turmoil' : undefined;
 }
 
 /**
@@ -78,3 +105,12 @@ export function viewForInput(input: PlayerInputModel | undefined): CenterView | 
  * - `build`: true when the choice is where to build a colony.
  */
 export const colonyPick = reactive<{offered: Array<ColonyName>, selected: ColonyName | undefined, build: boolean}>({offered: [], selected: undefined, build: false});
+
+/**
+ * The parties a choice in the operations panel offers, shared with the Turmoil view so the player can
+ * pick one there.
+ *
+ * - `offered`: the parties the choice accepts; empty when no such choice is showing.
+ * - `selected`: the party picked so far, from either place.
+ */
+export const partyPick = reactive<{offered: Array<PartyName>, selected: PartyName | undefined}>({offered: [], selected: undefined});

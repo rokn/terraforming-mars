@@ -16,7 +16,7 @@ function input(names: Array<ColonyName>, buttonLabel = 'Save'): SelectColonyMode
 function mountSelect(playerinput: SelectColonyModel, compact: boolean, onsave: (out: SelectColonyResponse) => void = () => {}) {
   return mount(SelectColony, {
     ...globalConfig,
-    global: {...globalConfig.global, provide: {compactColonies: () => compact}},
+    global: {...globalConfig.global, provide: {compactTiles: () => compact}},
     props: {playerView: {} as PlayerViewModel, playerinput, onsave, showsave: true, showtitle: true},
   });
 }

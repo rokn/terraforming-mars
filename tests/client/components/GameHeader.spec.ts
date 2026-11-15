@@ -2,7 +2,9 @@ import {shallowMount} from '@vue/test-utils';
 import {expect} from 'chai';
 import {globalConfig} from './getLocalVue';
 import GameHeader from '@/client/components/GameHeader.vue';
-import {fakeGameModel, fakePlayerViewModel} from './testHelpers';
+import {fakeGameModel, fakePlayerViewModel, fakeTurmoilModel} from './testHelpers';
+import PartyChip from '@/client/components/turmoil/PartyChip.vue';
+import {PartyName} from '@/common/turmoil/PartyName';
 import {Phase} from '@/common/Phase';
 import {PlayerInputModel} from '@/common/models/PlayerInputModel';
 
@@ -37,5 +39,11 @@ describe('GameHeader', () => {
     const wrapper = shallowMount(GameHeader, {...globalConfig, props: {playerView: fakePlayerViewModel({game: fakeGameModel({phase: Phase.END})})}});
     expect(wrapper.findAll('[data-test=phase]')).has.length(0);
     expect(wrapper.find('.tm-header-over').exists()).is.true;
+  });
+
+  it('names the ruling party in Turmoil games', () => {
+    expect(shallowMount(GameHeader, {...globalConfig, props: {playerView: fakePlayerViewModel()}}).find('[data-test=ruling]').exists()).is.false;
+    const wrapper = shallowMount(GameHeader, {...globalConfig, props: {playerView: fakePlayerViewModel({game: fakeGameModel({turmoil: fakeTurmoilModel()})})}});
+    expect(wrapper.findComponent(PartyChip).props('party')).eq(PartyName.SCIENTISTS);
   });
 });

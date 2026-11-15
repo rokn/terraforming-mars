@@ -2,7 +2,8 @@ import {shallowMount} from '@vue/test-utils';
 import {expect} from 'chai';
 import {globalConfig} from './getLocalVue';
 import GameBoardView from '@/client/components/GameBoardView.vue';
-import {fakeGameModel} from './testHelpers';
+import {fakeGameModel, fakeTurmoilModel} from './testHelpers';
+import Turmoil from '@/client/components/turmoil/Turmoil.vue';
 
 describe('GameBoardView', () => {
   it('mounts without errors', () => {
@@ -15,5 +16,11 @@ describe('GameBoardView', () => {
       },
     });
     expect(wrapper.exists()).to.be.true;
+  });
+
+  it('shows the Turmoil board unless asked not to', () => {
+    const props = {game: fakeGameModel({turmoil: fakeTurmoilModel()}), tileView: 'show' as const, players: []};
+    expect(shallowMount(GameBoardView, {...globalConfig, props}).findComponent(Turmoil).exists()).is.true;
+    expect(shallowMount(GameBoardView, {...globalConfig, props: {...props, showTurmoil: false}}).findComponent(Turmoil).exists()).is.false;
   });
 });

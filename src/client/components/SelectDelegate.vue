@@ -1,13 +1,16 @@
 <template>
-  <div>
+  <div class="wf-component wf-component--select-delegate">
     <div v-if="showtitle === true">{{ $t(playerinput.title) }}</div>
-    <label v-for="player in (playerinput.players || [])" :key="player" class="form-radio form-inline">
-      <input type="radio" v-model="selectedPlayer" :value="player">
-      <i class="form-icon"></i>
-      <span v-if="player === 'NEUTRAL'">Neutral</span>
-      <SelectPlayerRow v-else :player="playerView.players.find((otherPlayer) => otherPlayer.color === player)" />
-    </label>
-    <AppButton v-if="showsave === true" size="big" @click="saveData" :title="$t(playerinput.buttonLabel)" />
+    <div class="tm-delegate-picks">
+      <label v-for="player in (playerinput.players || [])" :key="player" class="form-radio form-inline tm-delegate-pick" data-test="delegate-pick">
+        <input type="radio" v-model="selectedPlayer" :value="player">
+        <i class="form-icon"></i>
+        <DelegateIcon :color="player === 'NEUTRAL' ? 'neutral' : player" :size="18" />
+        <span v-if="player === 'NEUTRAL'" v-i18n>Neutral</span>
+        <SelectPlayerRow v-else :player="playerView.players.find((otherPlayer) => otherPlayer.color === player)" />
+      </label>
+    </div>
+    <AppButton v-if="showsave === true" size="big" @click="saveData" :title="$t(playerinput.buttonLabel)" :disabled="selectedPlayer === undefined" data-primary />
   </div>
 </template>
 
@@ -18,6 +21,7 @@ import {ColorWithNeutral} from '@/common/Color';
 import {SelectDelegateModel} from '@/common/models/PlayerInputModel';
 import {PlayerViewModel} from '@/common/models/PlayerModel';
 import SelectPlayerRow from '@/client/components/SelectPlayerRow.vue';
+import DelegateIcon from '@/client/components/turmoil/DelegateIcon.vue';
 import {SelectDelegateResponse} from '@/common/inputs/InputResponse';
 
 interface DataModel {
@@ -47,13 +51,16 @@ export default defineComponent({
     },
   },
   data(): DataModel {
+    const players = this.playerinput.players ?? [];
     return {
-      selectedPlayer: undefined,
+      // A single delegate to choose starts chosen, so Enter confirms it.
+      selectedPlayer: players.length === 1 ? players[0] : undefined,
     };
   },
   components: {
     AppButton,
     SelectPlayerRow,
+    DelegateIcon,
   },
   methods: {
     saveData() {

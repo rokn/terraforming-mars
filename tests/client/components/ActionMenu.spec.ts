@@ -13,7 +13,8 @@ import {quickActions, requestAction, requestPlay} from '@/client/utils/quickActi
 import {asComplete} from './utils/models';
 import {ColonyName} from '@/common/colonies/ColonyName';
 import {simpleColonyModel} from '@/common/models/ColonyModel';
-import {fakeGameModel, fakePlayerViewModel, fakePublicPlayerModel} from './testHelpers';
+import {fakeGameModel, fakePlayerViewModel, fakePublicPlayerModel, fakeTurmoilModel} from './testHelpers';
+import {PartyName} from '@/common/turmoil/PartyName';
 import {Phase} from '@/common/Phase';
 
 const playCard = asComplete<SelectProjectCardToPlayModel>({
@@ -160,7 +161,7 @@ describe('ActionMenu', () => {
         ...globalConfig.global,
         components: {PlayerInputFactory},
         // The operations panel asks for compact colony choices; the dialog overrides it.
-        provide: {compactColonies: () => true},
+        provide: {compactTiles: () => true},
       },
       props: {playerView: fakePlayerViewModel({thisPlayer}), playerinput, onsave: (out: InputResponse) => saved = out, showsave: true, showtitle: true},
     });
@@ -181,6 +182,57 @@ describe('ActionMenu', () => {
       {type: 'colony', colonyName: ColonyName.LUNA},
     ]}});
     expect(quickActions.followUp).is.true;
+    quickActions.followUp = false;
+    wrapper.unmount();
+    home.remove();
+  });
+
+  it('labels the ruling policy action and keeps it beside sending a delegate', () => {
+    const policy: PlayerInputModel = {type: 'option', title: {message: '${0} (Turmoil ${1})', data: []}, buttonLabel: 'Pay'};
+    expect(actionKind(policy)).eq('policy');
+    PreferencesManager.INSTANCE.set('learner_mode', false);
+    const playerinput: OrOptionsModel = {type: 'or', title: 'Take your first action', buttonLabel: '', options: [
+      policy,
+      {type: 'option', title: 'Convert 8 heat into temperature', buttonLabel: 'Confirm'},
+      {type: 'party', title: 'Send a delegate in an area (from lobby)', buttonLabel: 'Send delegate', parties: [PartyName.UNITY]},
+    ]};
+    const thisPlayer = fakePublicPlayerModel({color: 'red'});
+    const wrapper = mount(ActionMenu, {
+      ...globalConfig,
+      global: {...globalConfig.global, components: {PlayerInputFactory}},
+      props: {playerView: fakePlayerViewModel({thisPlayer, game: fakeGameModel({turmoil: fakeTurmoilModel()})}), playerinput, onsave: () => {}, showsave: true, showtitle: true},
+    });
+    const tiles = wrapper.findAll('[data-test=action-tile]');
+    expect(tiles.map((t) => t.classes().find((c) => c.startsWith('tm-action-tile--')))).deep.eq(['tm-action-tile--heat', 'tm-action-tile--policy', 'tm-action-tile--delegate']);
+    expect(tiles[1].find('[data-test=action-hint]').text()).eq('Ruling policy');
+    expect(tiles[2].find('[data-test=action-hint]').text()).eq('4 in reserve · 1 in the lobby');
+  });
+
+  it('opens sending a delegate in a large dialog with the parties', async () => {
+    const home = document.createElement('div');
+    home.id = 'player-home';
+    document.body.appendChild(home);
+    PreferencesManager.INSTANCE.set('learner_mode', false);
+    let saved: InputResponse | undefined;
+    const playerinput: OrOptionsModel = {type: 'or', title: 'Take your first action', buttonLabel: '', options: [
+      {type: 'party', title: 'Send a delegate in an area (from lobby)', buttonLabel: 'Send delegate', parties: [PartyName.UNITY, PartyName.REDS]},
+      {type: 'option', title: 'Pass for this generation', buttonLabel: 'Pass'},
+    ]};
+    const wrapper = mount(ActionMenu, {
+      ...globalConfig,
+      attachTo: home,
+      global: {...globalConfig.global, components: {PlayerInputFactory}, provide: {compactTiles: () => true}},
+      props: {playerView: fakePlayerViewModel({game: fakeGameModel({turmoil: fakeTurmoilModel()})}), playerinput, onsave: (out: InputResponse) => saved = out, showsave: true, showtitle: true},
+    });
+    await wrapper.findAll('[data-test=action-tile]')[0].trigger('click');
+    await wrapper.vm.$nextTick();
+    const dialog = document.querySelector('.tm-play-modal');
+    expect(dialog?.querySelectorAll('[data-test=party]')).has.length(6);
+    expect(dialog?.querySelector('[data-test=party-picks]')).is.null;
+    (dialog?.querySelector('[data-test=party][data-party=Reds]') as HTMLElement).click();
+    await wrapper.vm.$nextTick();
+    (dialog?.querySelector('[data-primary]') as HTMLElement).click();
+    expect(saved).deep.eq({type: 'or', index: 0, response: {type: 'party', partyName: PartyName.REDS}});
     quickActions.followUp = false;
     wrapper.unmount();
     home.remove();
