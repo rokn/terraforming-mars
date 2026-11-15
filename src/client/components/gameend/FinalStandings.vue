@@ -21,7 +21,7 @@
       </svg>
       <div class="tm-standings-headline">
         <span class="tm-section-caption tm-standings-globals">
-          <span v-i18n>Temp</span> {{ temperatureText }}°C · O₂ {{ game.oxygenLevel }}% · <span v-i18n>Oceans</span> {{ game.oceans }}/{{ maximums.oceans }} · <span v-i18n>Generation</span> {{ game.generation }}
+          <span v-i18n>Temp</span> {{ temperatureText }}°C · O₂ {{ game.oxygenLevel }}% · <span v-i18n>Oceans</span> {{ game.oceans }}/{{ maximums.oceans }} · <template v-if="game.gameOptions.expansions.venus"><span v-i18n>Venus</span> <span data-test="venus">{{ game.venusScaleLevel }}%</span> · </template><span v-i18n>Generation</span> {{ game.generation }}
         </span>
         <h1 class="tm-standings-title" v-i18n>{{ game.isTerraformed ? 'Mars is habitable' : 'Game over' }}</h1>
         <div v-if="winners.length > 0" class="tm-standings-winner" data-test="winner">

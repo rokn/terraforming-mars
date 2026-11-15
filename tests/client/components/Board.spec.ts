@@ -2,6 +2,7 @@ import {shallowMount} from '@vue/test-utils';
 import {globalConfig} from './getLocalVue';
 import {expect} from 'chai';
 import Board from '@/client/components/Board.vue';
+import MarsGauges from '@/client/components/board/MarsGauges.vue';
 import BoardSpace from '@/client/components/BoardSpace.vue';
 import {SpaceModel} from '@/common/models/SpaceModel';
 import {SpaceType} from '@/common/boards/SpaceType';
@@ -116,5 +117,29 @@ describe('Board', () => {
 
     const ganymede = wrapper.findAllComponents(BoardSpace).find((w) => w.props('text') === 'Ganymede Colony');
     expect(ganymede?.props('space').tileType).to.eq(TileType.CITY);
+  });
+
+  it('draws Venus with the other gauges instead of the board image', () => {
+    const wrapper = shallowMount(Board, {
+      ...globalConfig,
+      props: {spaces, expansions: {...DEFAULT_EXPANSIONS, venus: true}, venusScaleLevel: 14, altVenusBoard: true, boardName: BoardName.THARSIS},
+    });
+    const gauges = wrapper.findComponent(MarsGauges);
+    expect(gauges.props('venus')).eq(14);
+    expect(gauges.props('altVenusBoard')).is.true;
+    expect(wrapper.classes()).contains('board-cont--venus');
+    expect(wrapper.find('.global-numbers-venus').exists()).is.false;
+    expect(wrapper.find('.global-alt-venus').exists()).is.false;
+  });
+
+  it('leaves Venus out of the gauges without Venus', () => {
+    const wrapper = shallowMount(Board, {
+      ...globalConfig,
+      props: {spaces, expansions: DEFAULT_EXPANSIONS, venusScaleLevel: 0, altVenusBoard: true, boardName: BoardName.THARSIS},
+    });
+    const gauges = wrapper.findComponent(MarsGauges);
+    expect(gauges.props('venus')).is.undefined;
+    expect(gauges.props('altVenusBoard')).is.false;
+    expect(wrapper.classes()).not.contains('board-cont--venus');
   });
 });

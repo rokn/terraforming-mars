@@ -3,6 +3,7 @@
     <template v-if="openOption === undefined || detailInModal">
       <div v-if="showtitle" class="tm-actions-title">{{ $t(playerinput.title) }}</div>
       <div v-if="playerinput.warning !== undefined" class="card-warning">({{ $t(playerinput.warning) }})</div>
+      <p v-if="worldGovernment" class="tm-actions-note" data-test="world-government-note" v-i18n>The World Government raises one global parameter. You gain no TR or bonuses from it.</p>
 
       <div class="tm-actions-grid">
         <button v-for="entry in mainEntries" :key="entry.idx" type="button"
@@ -106,6 +107,9 @@ import {quickActions, takeRequestedAction, takeRequestedCard} from '@/client/uti
 import {ActionKind, actionKind} from '@/client/utils/actionKind';
 import {CardName} from '@/common/cards/CardName';
 import {needsColonies} from '@/client/utils/centerView';
+import {Phase} from '@/common/Phase';
+import {getGlobalParameterMaximums} from '@/common/boards/GlobalParameterMaximums';
+import {MAX_VENUS_SCALE} from '@/common/constants';
 
 type Entry = {
   /** Index in `playerinput.options`. */
@@ -236,6 +240,11 @@ export default defineComponent({
     requestedAction(): CardName | undefined {
       return quickActions.actionCard;
     },
+    /* True when this is the end-of-generation choice of which global parameter the World Government raises. */
+    worldGovernment(): boolean {
+      // Isolated tests mount the menu without a game.
+      return this.playerView.game?.phase === Phase.SOLAR;
+    },
   },
   watch: {
     requestedCard(card: CardName | undefined) {
@@ -262,6 +271,9 @@ export default defineComponent({
   },
   methods: {
     describe(option: PlayerInputModel): {hint: string | undefined, muted: boolean} {
+      if (this.worldGovernment) {
+        return {hint: this.worldGovernmentHint(option), muted: false};
+      }
       if (option.type === 'projectCard' || option.type === 'card') {
         const available = option.cards.filter((c) => c.isDisabled !== true).length;
         const label = actionKind(option) === 'play' ? 'playable' : 'available';
@@ -274,6 +286,25 @@ export default defineComponent({
         return {hint: option.options.length + ' ' + this.$t('choices'), muted: false};
       }
       return {hint: undefined, muted: false};
+    },
+    /* The step a World Government option takes, from the current value to the next, e.g. "14% → 16%". */
+    worldGovernmentHint(option: PlayerInputModel): string | undefined {
+      const game = this.playerView.game;
+      const title = typeof option.title === 'string' ? option.title : option.title.message;
+      const max = getGlobalParameterMaximums(game.gameOptions.boardName);
+      const temperature = (t: number) => (t > 0 ? '+' + t : t.toString()) + '°';
+      switch (title) {
+      case 'Increase temperature':
+        return temperature(game.temperature) + ' → ' + temperature(game.temperature + 2);
+      case 'Increase oxygen':
+        return game.oxygenLevel + '% → ' + (game.oxygenLevel + 1) + '%';
+      case 'Add an ocean':
+        return game.oceans + '/' + max.oceans + ' → ' + (game.oceans + 1) + '/' + max.oceans;
+      case 'Increase Venus scale':
+        return game.venusScaleLevel + '% → ' + (game.venusScaleLevel + (game.venusScaleLevel < MAX_VENUS_SCALE ? 2 : 1)) + '%';
+      default:
+        return undefined;
+      }
     },
     /* The number of colony tiles `option` offers, and for trading, the fleets this player has free. */
     colonyHint(option: PlayerInputModel): string {

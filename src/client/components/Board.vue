@@ -4,7 +4,9 @@
       :boardName="boardName"
       :temperature="temperature"
       :oxygen="oxygen_level"
-      :oceans="oceans_count" />
+      :oceans="oceans_count"
+      :venus="expansions.venus ? venusScaleLevel : undefined"
+      :altVenusBoard="expansions.venus && altVenusBoard" />
     <div class="hide-tile-button-container">
       <div class="hide-tile-button" @click="$emit('toggleTileView')" data-test="hide-tiles-button" v-i18n>
         {{ tileView }} tiles
@@ -530,14 +532,14 @@ export default defineComponent({
     /*
      * True when the planet and global parameter gauges are drawn rather than taken from the board image.
      *
-     * Venus, Ares hazard thresholds and the large map still rely on markers positioned over the image.
+     * Ares hazard thresholds and the large map still rely on markers positioned over the image.
      */
     drawnBoard(): boolean {
-      return !this.isLargeBoard && !this.expansions.venus && !this.altVenusBoard && !this.expansions.ares;
+      return !this.isLargeBoard && !this.expansions.ares;
     },
     gameBoardClassName(): string {
       if (this.drawnBoard) {
-        return 'board-cont board-cont--drawn';
+        return this.expansions.venus ? 'board-cont board-cont--drawn board-cont--venus' : 'board-cont board-cont--drawn';
       }
       const css = this.expansions.venus ? 'board-cont board-with-venus' : 'board-cont board-without-venus';
       return this.isLargeBoard ? css + ' board-cont--large' : css;

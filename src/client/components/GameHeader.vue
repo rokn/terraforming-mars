@@ -110,7 +110,7 @@ export default defineComponent({
       return this.game.generation.toString().padStart(2, '0').split('');
     },
     terraformed(): number {
-      return terraformedPercent(this.game, this.game.gameOptions.boardName);
+      return terraformedPercent(this.game, this.game.gameOptions.boardName, this.game.gameOptions.expansions.venus);
     },
     isActing(): boolean {
       const waitingFor = this.playerView.waitingFor;

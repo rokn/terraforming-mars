@@ -2,7 +2,7 @@ import {Color} from '@/common/Color';
 import {Phase} from '@/common/Phase';
 import {BoardName} from '@/common/boards/BoardName';
 import {getGlobalParameterMaximums} from '@/common/boards/GlobalParameterMaximums';
-import {MIN_OXYGEN_LEVEL, MIN_TEMPERATURE} from '@/common/constants';
+import {MAX_VENUS_SCALE, MIN_OXYGEN_LEVEL, MIN_TEMPERATURE} from '@/common/constants';
 
 /** Base fill for each player color, as drawn by the in-game theme. */
 const PLAYER_HEX: Record<Color, string> = {
@@ -68,17 +68,29 @@ export type GlobalParameterValues = {
   temperature: number,
   oxygenLevel: number,
   oceans: number,
+  /* The Venus scale level, counted only when `includeVenus` is passed to `terraformedPercent`. */
+  venusScaleLevel?: number,
 };
 
+/* Number of Venus steps from 0% to `level`: 2% each up to 30%, then 1% each. */
+function venusSteps(level: number): number {
+  return level <= MAX_VENUS_SCALE ? level / 2 : MAX_VENUS_SCALE / 2 + level - MAX_VENUS_SCALE;
+}
+
 /*
- * Percentage (0-100) of temperature, oxygen and ocean steps completed on `boardName`.
+ * Percentage (0-100) of temperature, oxygen and ocean steps completed on `boardName`, and of Venus
+ * steps when `includeVenus`.
  *
  * Every step counts equally, which matches how much TR terraforming has produced.
  */
-export function terraformedPercent(values: GlobalParameterValues, boardName: BoardName): number {
+export function terraformedPercent(values: GlobalParameterValues, boardName: BoardName, includeVenus = false): number {
   const max = getGlobalParameterMaximums(boardName);
   const temperatureSteps = (max.temperature - MIN_TEMPERATURE) / 2;
-  const total = temperatureSteps + (max.oxygen - MIN_OXYGEN_LEVEL) + max.oceans;
-  const done = (values.temperature - MIN_TEMPERATURE) / 2 + (values.oxygenLevel - MIN_OXYGEN_LEVEL) + values.oceans;
+  let total = temperatureSteps + (max.oxygen - MIN_OXYGEN_LEVEL) + max.oceans;
+  let done = (values.temperature - MIN_TEMPERATURE) / 2 + (values.oxygenLevel - MIN_OXYGEN_LEVEL) + values.oceans;
+  if (includeVenus) {
+    total += venusSteps(max.venus);
+    done += venusSteps(values.venusScaleLevel ?? 0);
+  }
   return Math.round(Math.min(100, Math.max(0, 100 * done / total)));
 }

@@ -646,6 +646,29 @@
     z-index: 1;
   }
 }
+// With Venus the drawing gains a Venus track on the right, and the Venus spaces line up across the top right.
+.board-cont--drawn.board-cont--venus {
+  width: 770px;
+
+  .board-space-c73 { margin: 30px 0 0 456px; }
+  .board-space-c71 { margin: 30px 0 0 520px; }
+  .board-space-c70 { margin: 30px 0 0 584px; }
+  .board-space-c72 { margin: 30px 0 0 648px; }
+  .board-space-c78 { margin: 30px 0 0 712px; }
+
+  .board-space-c70,
+  .board-space-c71,
+  .board-space-c72,
+  .board-space-c73,
+  .board-space-c78 {
+    .board-space-text {
+      width: 62px;
+      margin: -24px 0 0 -8px;
+      font-size: 10px;
+      line-height: 10px;
+    }
+  }
+}
 .mars-gauges {
   position: absolute;
   left: 0;
@@ -680,6 +703,17 @@
 }
 .mars-gauges-label--ocean {
   fill: @tm_ocean;
+}
+.mars-gauges-label--venus {
+  fill: @tm_venus;
+}
+.mars-gauges-venus-cell {
+  fill: @tm_bg_raised;
+  stroke: @tm_line_strong;
+}
+.mars-gauges-venus-cell--on {
+  fill: @tm_venus;
+  stroke: @tm_bg;
 }
 .mars-gauges-value {
   font-family: @tm_font_display;
@@ -751,6 +785,47 @@
   .mars-gauges-bonus-icon {
     stroke: #FFD2A8;
   }
+}
+.mars-gauges-bonus--card {
+  .mars-gauges-bonus-plate {
+    fill: #3A2A1A;
+    stroke: @tm_text_muted;
+  }
+  .mars-gauges-bonus-icon {
+    fill: @tm_text;
+    stroke: @tm_text;
+    stroke-width: 1.4;
+  }
+}
+.mars-gauges-bonus--tr,
+.mars-gauges-bonus--colony {
+  .mars-gauges-bonus-plate {
+    fill: #4A3A12;
+    stroke: @tm_venus;
+  }
+  .mars-gauges-bonus-icon {
+    stroke: @tm_venus;
+  }
+}
+.mars-gauges-bonus-text {
+  font-family: @tm_font_display;
+  font-size: 11px;
+  font-weight: 800;
+  fill: @tm_venus;
+}
+.mars-gauges-bonus--standard,
+.mars-gauges-bonus--wild {
+  .mars-gauges-bonus-plate {
+    fill: #3A2A10;
+    stroke: @tm_gold;
+  }
+  .mars-gauges-bonus-icon {
+    stroke: @tm_gold;
+    stroke-width: 1.8;
+  }
+}
+.mars-gauges-bonus--wild .mars-gauges-bonus-icon {
+  fill: @tm_gold;
 }
 .mars-gauges-bonus--done {
   opacity: 0.35;
@@ -2011,6 +2086,12 @@ body:has(#player-home.tm-app) {
   .tm-caption();
   margin-bottom: 8px;
 }
+.tm-actions-note {
+  margin: -2px 0 10px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: @tm_text_muted;
+}
 .tm-actions-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -2216,6 +2297,10 @@ button.tm-zoom-level {
     flex: 0 1 auto;
     min-width: 0;
     padding-right: 6px;
+  }
+  // The last card is drawn whole, so its slot keeps its width and the others overlap instead.
+  > div:last-child {
+    flex-shrink: 0;
   }
   .sortable-lift {
     position: relative;

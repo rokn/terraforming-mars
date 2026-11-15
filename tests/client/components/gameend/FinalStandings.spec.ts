@@ -2,7 +2,8 @@ import {mount} from '@vue/test-utils';
 import {expect} from 'chai';
 import {globalConfig} from '../getLocalVue';
 import FinalStandings from '@/client/components/gameend/FinalStandings.vue';
-import {fakeGameModel, fakePublicPlayerModel} from '../testHelpers';
+import {fakeGameModel, fakeGameOptionsModel, fakePublicPlayerModel} from '../testHelpers';
+import {DEFAULT_EXPANSIONS} from '@/common/cards/GameModule';
 
 describe('FinalStandings', () => {
   const breakdown = (tr: number, cards: number) => ({...fakePublicPlayerModel().victoryPointsBreakdown, terraformRating: tr, victoryPoints: cards, total: tr + cards});
@@ -31,5 +32,15 @@ describe('FinalStandings', () => {
     // TR, milestones, awards, greenery, cities, cards.
     expect(cells).deep.eq(['40', '0', '0', '0', '0', '6']);
     expect(wrapper.findAll('[data-test=standing]')[0].find('[data-test=extra]').text()).contains('actions');
+  });
+
+  it('reports Venus with the other global parameters when Venus is in play', () => {
+    const props = (venus: boolean) => ({
+      game: fakeGameModel({venusScaleLevel: 30, gameOptions: fakeGameOptionsModel({expansions: {...DEFAULT_EXPANSIONS, venus}})}),
+      players: [first, second],
+      winners: [first],
+    });
+    expect(mount(FinalStandings, {...globalConfig, props: props(false)}).find('[data-test=venus]').exists()).is.false;
+    expect(mount(FinalStandings, {...globalConfig, props: props(true)}).find('[data-test=venus]').text()).eq('30%');
   });
 });

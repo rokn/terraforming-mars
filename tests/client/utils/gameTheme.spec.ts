@@ -21,6 +21,16 @@ describe('gameTheme', () => {
     expect(terraformedPercent({temperature: -22, oxygenLevel: 7, oceans: 3}, BoardName.THARSIS)).eq(33);
   });
 
+  it('counts Venus steps when Venus is in play', () => {
+    const values = {temperature: -22, oxygenLevel: 7, oceans: 3, venusScaleLevel: 14};
+    expect(terraformedPercent(values, BoardName.THARSIS)).eq(33);
+    // 14 of 42 Mars steps and 7 of 15 Venus steps: 21 of 57.
+    expect(terraformedPercent(values, BoardName.THARSIS, true)).eq(37);
+    expect(terraformedPercent({temperature: 8, oxygenLevel: 14, oceans: 9, venusScaleLevel: 28}, BoardName.THARSIS, true)).eq(98);
+    // Amazonis Planitia: 51 Mars steps and 18 Venus steps (1% each above 30%); 31% is 16 of them.
+    expect(terraformedPercent({temperature: 14, oxygenLevel: 18, oceans: 11, venusScaleLevel: 31}, BoardName.AMAZONIS_PLANITIA, true)).eq(97);
+  });
+
   it('shades player cubes lighter on top and darker on the right', () => {
     const shades = cubeShades('blue');
     expect(shades.left).eq(playerHex('blue'));

@@ -13,7 +13,8 @@ import {quickActions, requestAction, requestPlay} from '@/client/utils/quickActi
 import {asComplete} from './utils/models';
 import {ColonyName} from '@/common/colonies/ColonyName';
 import {simpleColonyModel} from '@/common/models/ColonyModel';
-import {fakePlayerViewModel, fakePublicPlayerModel} from './testHelpers';
+import {fakeGameModel, fakePlayerViewModel, fakePublicPlayerModel} from './testHelpers';
+import {Phase} from '@/common/Phase';
 
 const playCard = asComplete<SelectProjectCardToPlayModel>({
   type: 'projectCard',
@@ -183,5 +184,21 @@ describe('ActionMenu', () => {
     quickActions.followUp = false;
     wrapper.unmount();
     home.remove();
+  });
+
+  it('shows where each World Government choice takes its global parameter', () => {
+    const option = (title: string): PlayerInputModel => ({type: 'option', title, buttonLabel: 'Increase'});
+    const playerinput: OrOptionsModel = {
+      type: 'or', title: 'Select action for World Government Terraforming', buttonLabel: 'Confirm',
+      options: [option('Increase temperature'), option('Increase oxygen'), option('Increase Venus scale')],
+    };
+    const game = fakeGameModel({phase: Phase.SOLAR, temperature: -2, oxygenLevel: 8, venusScaleLevel: 14});
+    const wrapper = mount(ActionMenu, {
+      ...globalConfig,
+      global: {...globalConfig.global, components: {PlayerInputFactory}},
+      props: {playerView: fakePlayerViewModel({game}), playerinput, onsave: () => {}, showsave: true, showtitle: true},
+    });
+    expect(wrapper.find('[data-test=world-government-note]').exists()).is.true;
+    expect(wrapper.findAll('[data-test=action-hint]').map((h) => h.text())).deep.eq(['-2° → 0°', '8% → 9%', '14% → 16%']);
   });
 });

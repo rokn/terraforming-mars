@@ -1,5 +1,5 @@
 <template>
-  <svg class="mars-gauges" viewBox="0 0 670 620" width="670" height="620" role="img" :aria-label="ariaLabel">
+  <svg class="mars-gauges" :viewBox="`0 0 ${width} 620`" :width="width" height="620" role="img" :aria-label="ariaLabel">
     <defs>
       <radialGradient id="marsGaugesPlanet" cx="42%" cy="36%" r="70%">
         <stop offset="0" stop-color="#C9602F" />
@@ -58,6 +58,23 @@
       <path :d="bonusIcon(bonus.kind)" transform="scale(0.62) translate(-12, -12)" class="mars-gauges-bonus-icon" />
     </g>
 
+    <!-- Venus: a track of 2% steps (1% above 30%) right of the thermometer. -->
+    <g v-if="venus !== undefined" class="mars-gauges-venus" data-test="venus">
+      <text :x="VX" y="92" text-anchor="middle" class="mars-gauges-label mars-gauges-label--venus">VENUS</text>
+      <text :x="VX" y="118" text-anchor="middle" class="mars-gauges-value" data-test="venus-value">{{ venus }}%</text>
+      <rect v-for="cell in venusCells" :key="'v' + cell.value" :x="VX - 7" :y="cell.y" width="14" :height="cell.height" rx="2"
+        class="mars-gauges-venus-cell" :class="{'mars-gauges-venus-cell--on': cell.on}" data-test="venus-cell" />
+      <text v-for="tick in venusTicks" :key="'vt' + tick" :x="VX + 13" :y="venusY(tick) + 3.5"
+        class="mars-gauges-tick" :class="{'mars-gauges-tick--current': tick === venus}" data-test="venus-tick">{{ tick }}</text>
+      <g v-for="bonus in venusBonuses" :key="'vb' + bonus.kind + bonus.value" :transform="`translate(${bonus.x}, ${venusY(bonus.value)})`"
+        class="mars-gauges-bonus" :class="['mars-gauges-bonus--' + bonus.kind, {'mars-gauges-bonus--done': venus >= bonus.value}]" data-test="venus-bonus">
+        <title>{{ bonus.title }}</title>
+        <rect x="-10" y="-10" width="20" height="20" rx="4" class="mars-gauges-bonus-plate" />
+        <text v-if="bonus.kind === 'tr'" y="3.5" text-anchor="middle" class="mars-gauges-bonus-text">TR</text>
+        <path v-else :d="bonusIcon(bonus.kind)" transform="scale(0.62) translate(-12, -12)" class="mars-gauges-bonus-icon" />
+      </g>
+    </g>
+
     <!-- Oceans: a counter and one pip per ocean. -->
     <text x="22" y="596" class="mars-gauges-label mars-gauges-label--ocean" data-test="oceans-value">OCEANS {{ oceans }}/{{ maximums.oceans }}</text>
     <polygon v-for="pip in oceanPips" :key="'p' + pip.index" :points="pip.points"
@@ -70,12 +87,19 @@ import {defineComponent} from 'vue';
 import {BoardName} from '@/common/boards/BoardName';
 import {GlobalParameterMaximums, getGlobalParameterMaximums} from '@/common/boards/GlobalParameterMaximums';
 import {
+  ALT_VENUS_MINIMUM_BONUS,
+  MAX_VENUS_SCALE,
   MIN_OXYGEN_LEVEL,
   MIN_TEMPERATURE,
+  MIN_VENUS_SCALE,
   OXYGEN_LEVEL_FOR_TEMPERATURE_BONUS,
   TEMPERATURE_BONUS_FOR_HEAT_1,
   TEMPERATURE_BONUS_FOR_HEAT_2,
   TEMPERATURE_FOR_OCEAN_BONUS,
+  VENUS_LEVEL_FOR_AMAZONIS_COLONY_BONUS,
+  VENUS_LEVEL_FOR_AMAZONIS_TR_BONUS,
+  VENUS_LEVEL_FOR_CARD_BONUS,
+  VENUS_LEVEL_FOR_TR_BONUS,
 } from '@/common/constants';
 
 // Planet centre and radius, in the coordinates of `.board-cont`, chosen so the hex grid sits on the planet.
@@ -90,6 +114,12 @@ const OXYGEN_END = 342;
 const TX = 620;
 const T_TOP = 140;
 const T_BOTTOM = 486;
+// Venus track column (right of the thermometer, which widens the drawing) and its vertical extent.
+const VX = 722;
+const V_TOP = T_TOP;
+const V_BOTTOM = T_BOTTOM + 30;
+const WIDTH = 670;
+const WIDTH_WITH_VENUS = 770;
 
 function polar(r: number, degrees: number): [number, number] {
   const rad = degrees * Math.PI / 180;
@@ -111,15 +141,33 @@ function hexPoints(cx: number, cy: number, r: number): string {
     .join(' ');
 }
 
-type BonusKind = 'heat' | 'ocean' | 'temp';
+type BonusKind = 'heat' | 'ocean' | 'temp' | 'card' | 'tr' | 'colony' | 'standard' | 'wild';
 type Bonus = {value: number, title: string, kind: BonusKind};
 
-// Icons (24×24) for what each bonus gives: heat production, an ocean, a temperature step.
+// Icons (24×24) for what each bonus gives: heat production, an ocean, a temperature step, a card,
+// a colony, a standard resource of the player's choice, any resource. TR is drawn as text.
 const BONUS_ICONS: Record<BonusKind, string> = {
   heat: 'M12 3c1 4 5 5 5 10a5 5 0 0 1-10 0c0-3 2-4 2-6 1 1 2 2 3 1-1-2 0-4 0-5z',
   ocean: 'M12 3s6 7 6 11a6 6 0 0 1-12 0c0-4 6-11 6-11z',
   temp: 'M10 4a2 2 0 0 1 4 0v10a4 4 0 1 1-4 0zM12 9v8',
+  card: 'M7 3h10v18H7zM10 8h4',
+  tr: '',
+  colony: 'M4 18h16M6 18a6 6 0 0 1 12 0M12 6v6',
+  standard: 'M12 3l8 4.5v9L12 21l-8-4.5v-9zM4 7.5l8 4.5 8-4.5M12 12v9',
+  wild: 'M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.6l-5.4 2.9 1.2-6-4.5-4.2 6.1-.7z',
 };
+
+/* Venus levels from 0 up to `max`: 2% steps up to 30%, then 1% steps. */
+function venusLevels(max: number): Array<number> {
+  const levels = [];
+  for (let v = MIN_VENUS_SCALE; v <= Math.min(max, MAX_VENUS_SCALE); v += 2) {
+    levels.push(v);
+  }
+  for (let v = MAX_VENUS_SCALE + 1; v <= max; v++) {
+    levels.push(v);
+  }
+  return levels;
+}
 
 export default defineComponent({
   name: 'MarsGauges',
@@ -140,9 +188,19 @@ export default defineComponent({
       type: Number,
       required: true,
     },
+    /* The Venus scale level, or undefined when the game does not use Venus Next. */
+    venus: {
+      type: Number,
+      default: undefined,
+    },
+    /* True when the alternative Venus track (a resource for every step from 18%) is in play. */
+    altVenusBoard: {
+      type: Boolean,
+      default: false,
+    },
   },
   data() {
-    return {CX, CY, R, TX, T_TOP, T_BOTTOM};
+    return {CX, CY, R, TX, T_TOP, T_BOTTOM, VX};
   },
   computed: {
     maximums(): Readonly<GlobalParameterMaximums> {
@@ -187,9 +245,46 @@ export default defineComponent({
         on: i < this.oceans,
       }));
     },
+    width(): number {
+      return this.venus === undefined ? WIDTH : WIDTH_WITH_VENUS;
+    },
+    venusTicks(): Array<number> {
+      return venusLevels(this.maximums.venus);
+    },
+    /* One cell per step of the Venus track, from the level below to `value`. */
+    venusCells(): Array<{value: number, y: number, height: number, on: boolean}> {
+      const levels = this.venusTicks;
+      const gap = 2;
+      return levels.slice(1).map((value, i) => {
+        const top = this.venusY(value);
+        return {value, y: top + gap / 2, height: this.venusY(levels[i]) - top - gap, on: value <= (this.venus ?? 0)};
+      });
+    },
+    venusBonuses(): Array<Bonus & {x: number}> {
+      const amazonis = this.boardName === BoardName.AMAZONIS_PLANITIA;
+      const bonuses: Array<Bonus & {x: number}> = [
+        {value: VENUS_LEVEL_FOR_CARD_BONUS, title: `${VENUS_LEVEL_FOR_CARD_BONUS}%: draw a card`, kind: 'card', x: VX - 24},
+      ];
+      if (amazonis) {
+        bonuses.push(
+          {value: VENUS_LEVEL_FOR_AMAZONIS_COLONY_BONUS, title: `${VENUS_LEVEL_FOR_AMAZONIS_COLONY_BONUS}%: place a colony`, kind: 'colony', x: VX - 24},
+          {value: VENUS_LEVEL_FOR_AMAZONIS_TR_BONUS, title: `${VENUS_LEVEL_FOR_AMAZONIS_TR_BONUS}%: +1 TR`, kind: 'tr', x: VX - 24});
+      } else {
+        bonuses.push({value: VENUS_LEVEL_FOR_TR_BONUS, title: `${VENUS_LEVEL_FOR_TR_BONUS}%: +1 TR`, kind: 'tr', x: VX - 24});
+      }
+      if (this.altVenusBoard) {
+        for (const value of this.venusTicks.filter((v) => v > ALT_VENUS_MINIMUM_BONUS)) {
+          bonuses.push({value, title: `${value}%: a standard resource of your choice`, kind: 'standard', x: VX - 24});
+        }
+        const max = this.maximums.venus;
+        bonuses.push({value: max, title: `${max}%: a resource of your choice`, kind: 'wild', x: VX - 48});
+      }
+      return bonuses;
+    },
     ariaLabel(): string {
+      const venus = this.venus === undefined ? '' : `, Venus ${this.venus} of ${this.maximums.venus} percent`;
       return `Mars. Oxygen ${this.oxygen} of ${this.maximums.oxygen} percent, ` +
-        `temperature ${this.temperature} degrees, oceans ${this.oceans} of ${this.maximums.oceans}.`;
+        `temperature ${this.temperature} degrees, oceans ${this.oceans} of ${this.maximums.oceans}${venus}.`;
     },
   },
   methods: {
@@ -199,6 +294,12 @@ export default defineComponent({
     tempY(value: number): number {
       const fraction = (value - MIN_TEMPERATURE) / (this.maximums.temperature - MIN_TEMPERATURE);
       return T_BOTTOM - fraction * (T_BOTTOM - T_TOP);
+    },
+    venusY(value: number): number {
+      const levels = this.venusTicks;
+      const index = levels.indexOf(value);
+      const fraction = (index < 0 ? 0 : index) / (levels.length - 1);
+      return V_BOTTOM - fraction * (V_BOTTOM - V_TOP);
     },
     temperatureText(value: number): string {
       if (value > 0) {
